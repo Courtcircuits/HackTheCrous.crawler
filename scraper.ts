@@ -92,6 +92,7 @@ export async function getRestaurantDetails(
           foody.content.push(food.innerHTML);
           sumOfMealLengths += food.textContent?.length || 0;
         }
+        foody.type = foody_element.textContent?.substring(0, foody_element.textContent.length- sumOfMealLengths) || ""
         meal_data.foodies.push(foody);
       }
       restaurant_details.food_page.menus.push(meal_data);
