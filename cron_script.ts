@@ -1,6 +1,8 @@
 import { Client, QueryResult } from "pg";
 import { getRestaurantDetails } from "./scraper";
-import { Food_Page, Foody, Meal, RestaurantDetails } from "./types";
+import { RestaurantDetails } from "./types";
+import * as dotenv from 'dotenv'
+dotenv.config()
 
 enum Keyword_Category {
   RESTAURANT = 1,
@@ -88,6 +90,7 @@ async function getRestaurants(): Promise<Restaurant[]> {
       name: restaurant.name,
     });
   });
+  console.log(restaurants)
   return restaurants;
 }
 
@@ -116,24 +119,29 @@ async function updateMeals() {
   const restaurants = await getRestaurants();
   const keyword = new Map<string, Keyword[]>(); // reversed index table for search system
 
-  let restaurant_details: RestaurantDetails | null;
-const client = new Client(clientInfo);
-    await client.connect();
+  let restaurant_details : RestaurantDetails | null = null;
+  const client = new Client(clientInfo);
+  await client.connect();
   for (const restaurant of restaurants) {
     const restaurant_keyword: Keyword = {
       category: Keyword_Category.RESTAURANT,
       id_entity: restaurant.id_restaurant,
     };
     keyword.set(restaurant.name, [restaurant_keyword]);
-    restaurant_details = await getRestaurantDetails(restaurant.url);
+    try{
+      restaurant_details = await getRestaurantDetails(restaurant.url);
+    }catch(e){
+      console.error((e))
+    }
 
     if (restaurant_details === null) {
-      break;
+      continue;
     }
 
     
 
     for (const menu of restaurant_details.food_page.menus) {
+      console.log(menu)
       if (!keyword.has(menu.title)) {
         keyword.set(menu.title, []);
       }
@@ -170,6 +178,7 @@ const client = new Client(clientInfo);
   const query = "INSERT INTO Suggestions_Restaurant(keyword, idRestaurant, idcat)  VALUES($1,$2,$3)";
   const sqlPromises: Promise<QueryResult<any>>[] = [];
   for (const key in keyword.keys){
+    console.log(key)
     for (const keyword_conf of keyword.get(key) || [{category:"", id_entity:0}]){
       sqlPromises.push(client.query(query, [key, keyword_conf.id_entity, keyword_conf.category]))
     }
@@ -179,5 +188,6 @@ const client = new Client(clientInfo);
 }
 
 console.time("took");
-await updateMeals();
-console.timeEnd("took");
+updateMeals().then(()=> {
+  console.timeEnd("took");
+})

@@ -1,7 +1,6 @@
 import { JSDOM } from "jsdom";
 import { Foody, MapElement, Meal, RestaurantDetails } from "./types";
 
-
 const DAYS = [
   "lundi",
   "mardi",
@@ -17,7 +16,7 @@ const DAYS = [
 export async function getRestaurantDetails(
   url: string
 ): Promise<RestaurantDetails | null> {
-
+  console.log(`getting infos of ${url}`)
   const restaurant_details: RestaurantDetails = {
     coords: null,
     food_page: {
