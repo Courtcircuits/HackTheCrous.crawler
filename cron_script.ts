@@ -90,12 +90,10 @@ async function getRestaurants(): Promise<Restaurant[]> {
       name: restaurant.name,
     });
   });
-  console.log(restaurants)
   return restaurants;
 }
 
 async function insertMealIntoDB(menu: MealSql, client: Client) {
-  console.log(menu)
   await client.query(
     "INSERT INTO meal (typemeal, foodies, day, idrestaurant) VALUES ($1, $2, $3, $4)",
     [menu.type, menu.foodies, menu.day, menu.id_restaurant]
@@ -141,7 +139,6 @@ async function updateMeals() {
     
 
     for (const menu of restaurant_details.food_page.menus) {
-      console.log(menu)
       if (!keyword.has(menu.title)) {
         keyword.set(menu.title, []);
       }
@@ -173,16 +170,18 @@ async function updateMeals() {
       );
     }
   }
-  console.log(keyword);
-
-  const query = "INSERT INTO Suggestions_Restaurant(keyword, idRestaurant, idcat)  VALUES($1,$2,$3)";
-  const sqlPromises: Promise<QueryResult<any>>[] = [];
-  for (const key in keyword.keys){
+  const query = "INSERT INTO suggestions_restaurant(keyword, idRestaurant, idcat)  VALUES($1,$2,$3)";
+  const sqlPromises: Promise<QueryResult<any>>[] = []; 
+  keyword.forEach((val, key) => {
     console.log(key)
-    for (const keyword_conf of keyword.get(key) || [{category:"", id_entity:0}]){
-      sqlPromises.push(client.query(query, [key, keyword_conf.id_entity, keyword_conf.category]))
+    for (const keyword_conf of val || [{category:"", id_entity:0}]){
+      try{
+        sqlPromises.push(client.query(query, [key, keyword_conf.id_entity, keyword_conf.category]))
+      }catch(e){
+        console.error(e)
+      }
     }
-  }
+  })
   await Promise.all(sqlPromises)
   await client.end();
 }

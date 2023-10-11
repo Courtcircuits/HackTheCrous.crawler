@@ -16,7 +16,6 @@ const DAYS = [
 export async function getRestaurantDetails(
   url: string
 ): Promise<RestaurantDetails | null> {
-  console.log(`getting infos of ${url}`)
   const restaurant_details: RestaurantDetails = {
     coords: null,
     food_page: {
