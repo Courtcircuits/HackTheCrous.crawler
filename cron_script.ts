@@ -2,6 +2,7 @@ import { Client, QueryResult } from "pg";
 import { getRestaurantDetails } from "./scraper";
 import { RestaurantDetails } from "./types";
 import * as dotenv from 'dotenv'
+import { insertRestaurants } from "./cron_script_restaurants";
 dotenv.config()
 
 enum Keyword_Category {
@@ -21,7 +22,7 @@ interface RestaurantSql {
   name: string;
 }
 
-interface Restaurant {
+export interface Restaurant {
   id_restaurant: number;
   url: string;
   name: string;
@@ -100,6 +101,23 @@ async function insertMealIntoDB(menu: MealSql, client: Client) {
   );
 }
 
+async function insertRestaurantsInDB(restaurants: Restaurant[]) {
+  const client = new Client(clientInfo);
+  await client.connect();
+  const sqlPromises: Promise<QueryResult<any>>[] = [];
+  restaurants.forEach((restaurant) => {
+    sqlPromises.push(
+      client.query(
+        "INSERT INTO restaurant (url, name) VALUES ($1, $2)",
+        [restaurant.url, restaurant.name]
+      )
+    );
+  });
+  await Promise.all(sqlPromises);
+  await client.end();
+}
+
+
 // clear meal and suggetion_restaurant tables by deleting all the tupples to make sure no old data is kept
 async function clearMealAndSuggestionTables() {
   const client = new Client(clientInfo);
@@ -109,6 +127,13 @@ async function clearMealAndSuggestionTables() {
     client.query("DELETE FROM suggestions_restaurant"),
   ];
   await Promise.all(queries);
+  client.end();
+}
+
+async function clearRestaurantTable() {
+  const client = new Client(clientInfo);
+  await client.connect();
+  await client.query("DELETE FROM restaurant");
   client.end();
 }
 
@@ -126,6 +151,7 @@ async function updateMeals() {
       id_entity: restaurant.id_restaurant,
     };
     keyword.set(restaurant.name, [restaurant_keyword]);
+    console.log(restaurant.url)
     try{
       restaurant_details = await getRestaurantDetails(restaurant.url);
     }catch(e){
@@ -136,7 +162,7 @@ async function updateMeals() {
       continue;
     }
 
-    
+    console.log(restaurant_details.food_page)
 
     for (const menu of restaurant_details.food_page.menus) {
       if (!keyword.has(menu.title)) {
@@ -171,9 +197,9 @@ async function updateMeals() {
     }
   }
   const query = "INSERT INTO suggestions_restaurant(keyword, idRestaurant, idcat)  VALUES($1,$2,$3)";
-  const sqlPromises: Promise<QueryResult<any>>[] = []; 
+  const sqlPromises: Promise<QueryResult<any>>[] = [];
+  console.log(keyword)
   keyword.forEach((val, key) => {
-    console.log(key)
     for (const keyword_conf of val || [{category:"", id_entity:0}]){
       try{
         sqlPromises.push(client.query(query, [key, keyword_conf.id_entity, keyword_conf.category]))
@@ -185,6 +211,14 @@ async function updateMeals() {
   await Promise.all(sqlPromises)
   await client.end();
 }
+
+// async function insertRestaurantsUpdate() {
+//   await clearRestaurantTable();
+//   const restaurants = await insertRestaurants()
+//   await insertRestaurantsInDB(restaurants);
+// }
+// insertRestaurantsUpdate()
+
 
 console.time("took");
 updateMeals().then(()=> {

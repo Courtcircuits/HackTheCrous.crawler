@@ -1,5 +1,6 @@
 import { JSDOM } from "jsdom";
 import { Foody, MapElement, Meal, RestaurantDetails } from "./types";
+import { Restaurant } from "./cron_script";
 
 const DAYS = [
   "lundi",
@@ -11,7 +12,29 @@ const DAYS = [
   "dimanche",
 ];
 
+export async function getRestaurantUrls(url: string): Promise<Restaurant[]> {
+  const restaurants: Restaurant[] = [];
+  const dom = await JSDOM.fromURL(url);
+  const { document } = dom.window;
+  const restaurant_elements = document.querySelectorAll(".vc_restaurants ul li a");
+  for (const restaurant_element of restaurant_elements) {
+    const city = restaurant_element.querySelector(".restaurant_area")?.textContent;
+    if (city !== "Montpellier" && city !== "Sète") {
+      continue;
+    }
+    const restaurant_url = restaurant_element.getAttribute("href");
+    const restaurant_name = restaurant_element.querySelector(".restaurant_title")?.textContent;
 
+    if (restaurant_url) {
+      restaurants.push({
+        id_restaurant: 0,
+        name: restaurant_name || "",
+        url: restaurant_url,
+      });
+    }
+  }
+  return restaurants;
+}
 
 export async function getRestaurantDetails(
   url: string
@@ -27,6 +50,7 @@ export async function getRestaurantDetails(
   };
 
   const dom = await JSDOM.fromURL(url);
+  console.log(dom.window.document.querySelector("h1")?.textContent);
   const { document } = dom.window;
   try {
     const menu_element = document.querySelector(".menu");
@@ -70,7 +94,7 @@ export async function getRestaurantDetails(
       if (meal_title === null) {
         throw new Error(".meal_title not found on page : " + url);
       }
-      let meal_data: Meal = {
+      const meal_data: Meal = {
         title: meal_title.innerHTML,
         foodies: [],
       };
@@ -80,7 +104,7 @@ export async function getRestaurantDetails(
       let sumOfMealLengths: number;
 
       for (const foody_element of foody_elements) {
-        let foody: Foody = {
+        const foody: Foody = {
           content: [],
           type: "",
         };
