@@ -1,6 +1,6 @@
 import { JSDOM } from "jsdom";
-import { Foody, MapElement, Meal, RestaurantDetails } from "./types";
-import { Restaurant } from "./cron_script";
+import { Coords, Foody, MapElement, Meal, RestaurantDetails } from "./types";
+import { Restaurant } from "./controller";
 
 const DAYS = [
   "lundi",
@@ -50,7 +50,6 @@ export async function getRestaurantDetails(
   };
 
   const dom = await JSDOM.fromURL(url);
-  console.log(dom.window.document.querySelector("h1")?.textContent);
   const { document } = dom.window;
   try {
     const menu_element = document.querySelector(".menu");
@@ -114,7 +113,7 @@ export async function getRestaurantDetails(
           foody.content.push(food.innerHTML);
           sumOfMealLengths += food.textContent?.length || 0;
         }
-        foody.type = foody_element.textContent?.substring(0, foody_element.textContent.length- sumOfMealLengths) || ""
+        foody.type = foody_element.textContent?.substring(0, foody_element.textContent.length - sumOfMealLengths) || ""
         meal_data.foodies.push(foody);
       }
       restaurant_details.food_page.menus.push(meal_data);
@@ -124,4 +123,27 @@ export async function getRestaurantDetails(
     return null;
   }
   return restaurant_details;
+}
+
+export async function getRestaurantCoordinates(restaurant_url: string): Promise<Coords> {
+  let coords: Coords;
+
+  const dom = await JSDOM.fromURL(restaurant_url);
+  const { document } = dom.window;
+  try {
+    const map_element = document.querySelector<MapElement>("#map");
+
+    if (map_element === null) {
+      throw new Error("#map was not found");
+    }
+
+    coords = {
+      x: parseFloat(map_element.dataset.lat),
+      y: parseFloat(map_element.dataset.lon),
+    };
+
+  } catch (e) {
+    throw new Error(e);
+  }
+  return coords;
 }
