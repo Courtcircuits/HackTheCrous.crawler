@@ -11,3 +11,4 @@ database:
   name: "hackthecrous"
 
 namespace: "hackthecrous"
+name: "hackthecrous-jobs"

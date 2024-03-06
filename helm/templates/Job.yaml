@@ -2,13 +2,13 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ .Release.Name }}-{{ .name}}
+  name: {{ .Values.name }}-{{ .name}}
   namespace: {{ .Values.namespace }}
 spec:
   template:
     spec:
       containers:
-      - name: {{ .Release.Name }}-{{ .name}}
+      - name: {{ .Values.name }}-{{ .name}}
         image: milou666/hackthecrous-crawler:{{ .Values.image.tag }}
         command: npm start {{ .command }}
         env:
