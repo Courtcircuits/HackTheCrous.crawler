@@ -89,7 +89,14 @@ export async function createTables(): Promise<void> {
       return;
     }
     console.log(data)
-    client.query(data)
+    client.query(data).then(() => {
+      console.log("Tables created");
+      client.end();
+    }).catch((err) => {
+      console.error(err);
+      client.end();
+    });
+    
     return;
   }
   );
