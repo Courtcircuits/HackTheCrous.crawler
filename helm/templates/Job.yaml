@@ -1,28 +1,30 @@
-{{- range .Values.jobs}}
+{{- $values := .Values -}}
+{{- $release := .Release -}}
+{{- range $.Values.jobs}}
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ .Values.name }}-{{ .name}}
-  namespace: {{ .Values.namespace }}
+  name: {{ $release.name }}-{{ .name}}
+  namespace: {{ $release.namespace }}
 spec:
   template:
     spec:
       containers:
-      - name: {{ .Values.name }}-{{ .name}}
-        image: milou666/hackthecrous-crawler:{{ .Values.image.tag }}
+      - name: {{ $release.name }}-{{ .name}}
+        image: milou666/hackthecrous-crawler:{{ $values.image.tag }}
         command: npm start {{ .command }}
         env:
         - name: DATABASE_URL
           value: ""
         - name: PG_USER
-          value: {{ .Values.database.user | quote }}
+          value: {{ $values.database.user | quote }}
         - name: PG_HOST
-          value: {{ .Values.database.host | quote }}
+          value: {{ $values.database.host | quote }}
         - name: PG_PORT
-          value: {{ .Values.database.port | quote }}
+          value: {{ $values.database.port | quote }}
         - name: PG_PASSWORD
           secretKeyRef:
-            name: {{ .Values.database.secretName }}
+            name: {{ $values.database.secretName }}
             key: postgresql-password
       restartPolicy: Never
   backoffLimit: 4
