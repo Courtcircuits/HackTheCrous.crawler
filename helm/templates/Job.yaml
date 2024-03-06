@@ -1,0 +1,29 @@
+{{- range .Values.jobs}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pi
+  namespace: {{ .Release.Namespace }}
+spec:
+  template:
+    spec:
+      containers:
+      - name: {{ .Release.Name }}-{{ .name}}
+        image: milou666/hackthecrous-crawler:{{ .Values.image.tag }}
+        command: npm start {{ .command }}
+        env:
+        - name: DATABASE_URL
+          value: ""
+        - name: PG_USER
+          value: {{ .Values.database.user | quote }}
+        - name: PG_HOST
+          value: {{ .Values.database.host | quote }}
+        - name: PG_PORT
+          value: {{ .Values.database.port | quote }}
+        - name: PG_PASSWORD
+          secretKeyRef:
+            name: {{ .Values.database.secretName }}
+            key: postgresql-password
+      restartPolicy: Never
+  backoffLimit: 4
+{{- end}}

@@ -1,8 +1,9 @@
 import { Client, QueryResult } from "pg";
 import { getRestaurantDetails } from "./scraper";
 import { Coords, RestaurantDetails } from "./types";
-import * as dotenv from 'dotenv'
-dotenv.config()
+import * as dotenv from "dotenv";
+import { readFile } from "fs";
+dotenv.config();
 
 enum Keyword_Category {
   RESTAURANT = 1,
@@ -59,8 +60,8 @@ function formatDate(date: string): string {
     "décembre",
   ];
   let month;
-  for(let index=0; index<MONTHS.length; index++) {
-    month = MONTHS[index]
+  for (let index = 0; index < MONTHS.length; index++) {
+    month = MONTHS[index];
     if (date.includes(month)) {
       const day = date.substring(0, date.indexOf(month) - 1);
       const monthNumber = index + 1;
@@ -68,11 +69,32 @@ function formatDate(date: string): string {
         date.indexOf(month) + month.length + 1,
         date.length
       );
-      return `${year}-${monthNumber}-${day.substring(day.length-2, day.length)}`;
+      return `${year}-${monthNumber}-${day.substring(
+        day.length - 2,
+        day.length
+      )}`;
     }
   }
   return "";
 }
+
+export async function createTables(): Promise<void> {
+  const client = new Client(clientInfo);
+  console.log(`Connecting to database ${clientInfo.database} on host ${clientInfo.host}`);
+  await client.connect();
+  console.log("Connected to database");
+  readFile("scripts/create_tables.sql", "utf8", (err, data) => {
+    if (err) {
+      console.error(err);
+      return;
+    }
+    console.log(data)
+    client.query(data)
+    return;
+  }
+  );
+}
+
 
 async function getRestaurants(): Promise<Restaurant[]> {
   const client = new Client(clientInfo);
@@ -94,6 +116,26 @@ async function getRestaurants(): Promise<Restaurant[]> {
   return restaurants;
 }
 
+async function insertRestaurantCategories(client: Client) {
+  const existingCategories = await client.query(
+    "SELECT * FROM cat_suggestions"
+  );
+  if (existingCategories.rowCount > 0) {
+    return;
+  }
+
+  for (const category of [
+    Keyword_Category.RESTAURANT,
+    Keyword_Category.FOOD,
+    Keyword_Category.PERIOD,
+  ]) {
+    await client.query(
+      "INSERT INTO cat_suggestions (idcat, namecat) VALUES ($1, $2)",
+      [category, Keyword_Category[category]]
+    );
+  }
+}
+
 async function insertMealIntoDB(menu: MealSql, client: Client) {
   await client.query(
     "INSERT INTO meal (typemeal, foodies, day, idrestaurant) VALUES ($1, $2, $3, $4)",
@@ -104,28 +146,26 @@ async function insertMealIntoDB(menu: MealSql, client: Client) {
 export async function insertRestaurantsInDB(restaurants: Restaurant[]) {
   const client = new Client(clientInfo);
   await client.connect();
-  const sqlPromises: Promise<QueryResult<any>>[] = [];
+  const sqlPromises: Promise<
+    QueryResult<{
+      idrestaurant: string;
+      url: string;
+      name: string;
+    }>
+  >[] = [];
   restaurants.forEach((restaurant) => {
     const query = `INSERT INTO restaurant(url, name${
       restaurant.coords ? ", gpscoord" : ""
-    }) VALUES($1,$2${
-      restaurant.coords ? ",$3" : ""
-    })`;
+    }) VALUES($1,$2${restaurant.coords ? ",$3" : ""})`;
     const values = [restaurant.url, restaurant.name];
     if (restaurant.coords) {
       values.push(`(${restaurant.coords.x},${restaurant.coords.y})`);
     }
-    sqlPromises.push(
-      client.query(
-        query,
-        values
-      )
-    );
+    sqlPromises.push(client.query(query, values));
   });
   await Promise.all(sqlPromises);
   await client.end();
 }
-
 
 // clear meal and suggetion_restaurant tables by deleting all the tupples to make sure no old data is kept
 async function clearMealAndSuggestionTables() {
@@ -146,24 +186,25 @@ export async function clearRestaurantTable() {
   client.end();
 }
 
-async function updateMeals() {
+export async function updateMeals() {
   await clearMealAndSuggestionTables();
   const restaurants = await getRestaurants();
   const keyword = new Map<string, Keyword[]>(); // reversed index table for search system
 
-  let restaurant_details : RestaurantDetails | null = null;
+  let restaurant_details: RestaurantDetails | null = null;
   const client = new Client(clientInfo);
   await client.connect();
+  await insertRestaurantCategories(client);
   for (const restaurant of restaurants) {
     const restaurant_keyword: Keyword = {
       category: Keyword_Category.RESTAURANT,
       id_entity: restaurant.id_restaurant,
     };
     keyword.set(restaurant.name, [restaurant_keyword]);
-    try{
+    try {
       restaurant_details = await getRestaurantDetails(restaurant.url);
-    }catch(e){
-      console.error((e))
+    } catch (e) {
+      console.error(e);
     }
 
     if (restaurant_details === null) {
@@ -202,18 +243,31 @@ async function updateMeals() {
       );
     }
   }
-  const query = "INSERT INTO suggestions_restaurant(keyword, idRestaurant, idcat)  VALUES($1,$2,$3)";
-  const sqlPromises: Promise<QueryResult<any>>[] = [];
+  const query =
+    "INSERT INTO suggestions_restaurant(keyword, idRestaurant, idcat)  VALUES($1,$2,$3)";
+  const sqlPromises: Promise<
+    QueryResult<{
+      keyword: string;
+      idrestaurant: number;
+      idcat: number;
+    }>
+  >[] = [];
   keyword.forEach((val, key) => {
-    for (const keyword_conf of val || [{category:"", id_entity:0}]){
-      try{
-        sqlPromises.push(client.query(query, [key, keyword_conf.id_entity, keyword_conf.category]))
-      }catch(e){
-        console.error(e)
+    for (const keyword_conf of val || [{ category: "", id_entity: 0 }]) {
+      try {
+        sqlPromises.push(
+          client.query(query, [
+            key,
+            keyword_conf.id_entity,
+            keyword_conf.category,
+          ])
+        );
+      } catch (e) {
+        console.error(e);
       }
     }
-  })
-  await Promise.all(sqlPromises)
+  });
+  await Promise.all(sqlPromises);
   await client.end();
 }
 
@@ -228,4 +282,3 @@ async function updateMeals() {
 // console.time("took");
 // updateMeals().then(()=> {
 //   console.timeEnd("took");
-// })

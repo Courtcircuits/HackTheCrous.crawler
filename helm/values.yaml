@@ -1,0 +1,11 @@
+jobs:
+- name: "up-tables"
+  command: "up"
+- name: "get-restaurants"
+  command: "restaurants"
+database:
+  user: "postgres"
+  password: "postgres"
+  host: "pgsql-postgresql.hackthecrous.svc.cluster.local"
+  port: "5432"
+  name: "hackthecrous"

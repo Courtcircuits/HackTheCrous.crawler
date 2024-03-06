@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import { clearRestaurantTable, insertRestaurantsInDB } from "./controller";
+import { clearRestaurantTable, createTables, insertRestaurantsInDB, updateMeals } from "./controller";
 import { getRestaurantCoordinates, getRestaurantUrls } from "./scraper";
 
 const program = new Command();
@@ -17,5 +17,17 @@ program.command("restaurants").description("Populate your database with Crous da
   await insertRestaurantsInDB(restaurants);
   console.log("Your database now contains the Crous restaurants.");
 })
+
+program.command("meals").description("Populate your database with Crous meals").action(()=> {
+  console.time("took");
+  updateMeals().then(() => {
+    console.timeEnd("took");
+  });
+})
+
+program.command("up").description("Import tables into the database").action(async ()=> {
+  createTables();
+})
+  
 
 program.parse(process.argv);
