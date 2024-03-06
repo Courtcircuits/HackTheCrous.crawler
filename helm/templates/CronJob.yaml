@@ -15,7 +15,7 @@ spec:
               command:
                 - /bin/sh
                 - -c
-                - npm start meals
+                - node dist/index.js meals
               env:
                 - name: DATABASE_URL
                   value: ""

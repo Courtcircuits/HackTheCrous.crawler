@@ -13,7 +13,7 @@ spec:
       - name: {{ $release.Name }}-{{ .name}}
         image: "milou666/hackthecrous-crawler:{{ $values.image.tag }}"
         command: 
-        - "npm start {{ .command }}"
+        - "node dist/index.js {{ .command }}"
         env:
         - name: DATABASE_URL
           value: ""
