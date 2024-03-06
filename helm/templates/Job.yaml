@@ -12,7 +12,8 @@ spec:
       containers:
       - name: {{ $release.Name }}-{{ .name}}
         image: "milou666/hackthecrous-crawler:{{ $values.image.tag }}"
-        command: "npm start {{ .command }}"
+        command: 
+        - "npm start {{ .command }}"
         env:
         - name: DATABASE_URL
           value: ""
