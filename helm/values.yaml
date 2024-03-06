@@ -9,3 +9,5 @@ database:
   port: "5432"
   name: "hackthecrous"
   secretName: "htc-secret"
+image:
+  tag: "277c6be497f832d894b70a78debcbf2cf1b1e1db"

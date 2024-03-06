@@ -23,11 +23,10 @@ spec:
         - name: PG_PORT
           value: {{ $values.database.port | quote }}
         - name: PG_PASSWORD
-          value: "postgres"
-        #   valueFrom:
-        #     secretKeyRef:
-        #         name: {{ $values.database.secretName }}
-        #         key: postgresql-password
+          valueFrom:
+            secretKeyRef:
+                name: {{ $values.database.secretName }}
+                key: postgresql-password
       restartPolicy: Never
   backoffLimit: 4
 ---
