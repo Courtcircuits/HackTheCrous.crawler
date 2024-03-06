@@ -2,7 +2,7 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: update-meals
-  namespace: {{ .Values.namespace }}
+  namespace: {{ .Release.Namespace }}
 spec:
   schedule: "* 2 * * *"
   jobTemplate:
@@ -10,8 +10,8 @@ spec:
       template:
         spec:
           containers:
-          - name: {{ .Values.name }}-update-meals
-            image: milou666/hackthecrous-crawler:{{ .Values.image.tag }}
+          - name: "{{ .Release.Name }}-update-meals"
+            image: "milou666/hackthecrous-crawler:{{ .Values.image.tag }}"
             command:
             - /bin/sh
             - -c
