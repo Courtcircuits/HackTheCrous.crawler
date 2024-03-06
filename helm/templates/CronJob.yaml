@@ -20,13 +20,13 @@ spec:
                 - name: DATABASE_URL
                   value: ""
                 - name: PG_USER
-                  value: {{ $values.database.user | quote }}
+                  value: {{ .Values.database.user | quote }}
                 - name: PG_HOST
-                  value: {{ $values.database.host | quote }}
+                  value: {{ .Values.database.host | quote }}
                 - name: PG_PORT
-                  value: {{ $values.database.port | quote }}
+                  value: {{ .Values.database.port | quote }}
                 - name: PG_PASSWORD
                   secretKeyRef:
-                    name: {{ $values.database.secretName }}
+                    name: {{ .Values.database.secretName }}
                     key: postgresql-password
           restartPolicy: OnFailure
