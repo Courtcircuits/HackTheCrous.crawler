@@ -10,10 +10,23 @@ spec:
       template:
         spec:
           containers:
-          - name: "{{ .Release.Name }}-update-meals"
-            image: "milou666/hackthecrous-crawler:{{ .Values.image.tag }}"
-            command:
-            - /bin/sh
-            - -c
-            - npm start meals
+            - name: "{{ .Release.Name }}-update-meals"
+              image: "milou666/hackthecrous-crawler:{{ .Values.image.tag }}"
+              command:
+                - /bin/sh
+                - -c
+                - npm start meals
+              env:
+                - name: DATABASE_URL
+                  value: ""
+                - name: PG_USER
+                  value: {{ $values.database.user | quote }}
+                - name: PG_HOST
+                  value: {{ $values.database.host | quote }}
+                - name: PG_PORT
+                  value: {{ $values.database.port | quote }}
+                - name: PG_PASSWORD
+                  secretKeyRef:
+                    name: {{ $values.database.secretName }}
+                    key: postgresql-password
           restartPolicy: OnFailure

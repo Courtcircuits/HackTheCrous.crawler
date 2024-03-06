@@ -9,3 +9,4 @@ database:
   host: "pgsql-postgresql.hackthecrous.svc.cluster.local"
   port: "5432"
   name: "hackthecrous"
+  secretName: "htc-secret"
