@@ -4,7 +4,8 @@
   "description": "Web crawler for hack the crous",
   "main": "dist/index.js",
   "scripts": {
-    "start": "tsc && node dist/index.js"
+    "start": "tsc && node dist/index.js",
+    "build": "tsc"
   },
   "compilerOptions": {
     "esModuleInterop": true
