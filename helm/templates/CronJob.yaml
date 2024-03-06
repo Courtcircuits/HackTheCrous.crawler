@@ -19,6 +19,8 @@ spec:
               env:
                 - name: DATABASE_URL
                   value: ""
+                - name: PG_DATABASE
+                  value: {{ .Values.database.name | quote }}
                 - name: PG_USER
                   value: {{ .Values.database.user | quote }}
                 - name: PG_HOST
