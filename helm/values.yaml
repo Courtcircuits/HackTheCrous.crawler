@@ -5,8 +5,10 @@ jobs:
   command: "restaurants"
 database:
   user: "postgres"
-  password: "postgres"
   host: "pgsql-postgresql.hackthecrous.svc.cluster.local"
   port: "5432"
   name: "hackthecrous"
   secretName: "htc-secret"
+image:
+  tag: "ba1ea4a14a1bfdc7187eda79cb4c3e84f41a19b3"
+ 

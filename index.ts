@@ -1,8 +1,10 @@
 import { Command } from "commander";
 import { clearRestaurantTable, createTables, insertRestaurantsInDB, updateMeals } from "./controller";
 import { getRestaurantCoordinates, getRestaurantUrls } from "./scraper";
+import * as dotenv from "dotenv";
 
 const program = new Command();
+dotenv.config();
 
 program.version("0.0.1").description("Populate your HackTheCrous database with Crous data");
 
@@ -26,6 +28,7 @@ program.command("meals").description("Populate your database with Crous meals").
 })
 
 program.command("up").description("Import tables into the database").action(async ()=> {
+  console.log(process.env.PG_PASSWORD)
   createTables();
 })
   

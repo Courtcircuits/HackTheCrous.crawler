@@ -12,8 +12,7 @@ spec:
       containers:
       - name: {{ $release.Name }}-{{ .name}}
         image: "milou666/hackthecrous-crawler:{{ $values.image.tag }}"
-        command: 
-        - "node dist/index.js {{ .command }}"
+        command: ["node", "dist/index.js", {{ .command | quote }}]
         env:
         - name: DATABASE_URL
           value: ""
@@ -24,9 +23,12 @@ spec:
         - name: PG_PORT
           value: {{ $values.database.port | quote }}
         - name: PG_PASSWORD
-          secretKeyRef:
-            name: {{ $values.database.secretName }}
-            key: postgresql-password
+          value: "postgres"
+        #   valueFrom:
+        #     secretKeyRef:
+        #         name: {{ $values.database.secretName }}
+        #         key: postgresql-password
       restartPolicy: Never
   backoffLimit: 4
+---
 {{- end}}
