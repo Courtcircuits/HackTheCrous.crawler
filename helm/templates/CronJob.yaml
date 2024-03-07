@@ -4,7 +4,7 @@ metadata:
   name: update-meals
   namespace: {{ .Release.Namespace }}
 spec:
-  schedule: "0 0 * * *"
+  schedule: "0 6,10,11,16,18 * * *"
   jobTemplate:
     spec:
       template:
