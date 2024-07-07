@@ -20,7 +20,8 @@ CREATE TABLE restaurant(
     idrestaurant serial PRIMARY KEY,
     url TEXT,
     name TEXT,
-    gpscoord POINT
+    gpscoord POINT,
+    hours TEXT
 );
 
 CREATE TABLE cat_suggestions(

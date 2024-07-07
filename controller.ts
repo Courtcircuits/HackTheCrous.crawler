@@ -1,5 +1,5 @@
 import { Client, QueryResult } from "pg";
-import { getRestaurantDetails } from "./scraper";
+import { getOpenHours, getRestaurantDetails } from "./scraper";
 import { Coords, RestaurantDetails } from "./types";
 import * as dotenv from "dotenv";
 import { readFile } from "fs";
@@ -22,11 +22,17 @@ interface RestaurantSql {
   name: string;
 }
 
+export interface OpenHours {
+  start: string; //forat HH:MM
+  end: string;
+}
+
 export interface Restaurant {
   id_restaurant: number;
   url: string;
   name: string;
   coords?: Coords;
+  open_hours?: OpenHours;
 }
 
 interface MealSql {
@@ -67,11 +73,11 @@ function formatDate(date: string): string {
       const monthNumber = index + 1;
       const year = date.substring(
         date.indexOf(month) + month.length + 1,
-        date.length
+        date.length,
       );
       return `${year}-${monthNumber}-${day.substring(
         day.length - 2,
-        day.length
+        day.length,
       )}`;
     }
   }
@@ -80,7 +86,9 @@ function formatDate(date: string): string {
 
 export async function createTables(): Promise<void> {
   const client = new Client(clientInfo);
-  console.log(`Connecting to database ${clientInfo.database} on host ${clientInfo.host}`);
+  console.log(
+    `Connecting to database ${clientInfo.database} on host ${clientInfo.host}`,
+  );
   await client.connect();
   console.log("Connected to database");
   readFile("scripts/create_tables.sql", "utf8", (err, data) => {
@@ -88,26 +96,27 @@ export async function createTables(): Promise<void> {
       console.error(err);
       return;
     }
-    console.log(data)
-    client.query(data).then(() => {
-      console.log("Tables created");
-      client.end();
-    }).catch((err) => {
-      console.error(err);
-      client.end();
-    });
-    
-    return;
-  }
-  );
-}
+    console.log(data);
+    client
+      .query(data)
+      .then(() => {
+        console.log("Tables created");
+        client.end();
+      })
+      .catch((err) => {
+        console.error(err);
+        client.end();
+      });
 
+    return;
+  });
+}
 
 async function getRestaurants(): Promise<Restaurant[]> {
   const client = new Client(clientInfo);
   await client.connect();
   const result = await client.query(
-    "SELECT idrestaurant, url, name FROM restaurant"
+    "SELECT idrestaurant, url, name FROM restaurant",
   );
   await client.end();
 
@@ -125,7 +134,7 @@ async function getRestaurants(): Promise<Restaurant[]> {
 
 async function insertRestaurantCategories(client: Client) {
   const existingCategories = await client.query(
-    "SELECT * FROM cat_suggestions"
+    "SELECT * FROM cat_suggestions",
   );
   if (existingCategories.rowCount > 0) {
     return;
@@ -138,7 +147,7 @@ async function insertRestaurantCategories(client: Client) {
   ]) {
     await client.query(
       "INSERT INTO cat_suggestions (idcat, namecat) VALUES ($1, $2)",
-      [category, Keyword_Category[category]]
+      [category, Keyword_Category[category]],
     );
   }
 }
@@ -146,7 +155,7 @@ async function insertRestaurantCategories(client: Client) {
 async function insertMealIntoDB(menu: MealSql, client: Client) {
   await client.query(
     "INSERT INTO meal (typemeal, foodies, day, idrestaurant) VALUES ($1, $2, $3, $4)",
-    [menu.type, menu.foodies, menu.day, menu.id_restaurant]
+    [menu.type, menu.foodies, menu.day, menu.id_restaurant],
   );
 }
 
@@ -163,10 +172,15 @@ export async function insertRestaurantsInDB(restaurants: Restaurant[]) {
   restaurants.forEach((restaurant) => {
     const query = `INSERT INTO restaurant(url, name${
       restaurant.coords ? ", gpscoord" : ""
-    }) VALUES($1,$2${restaurant.coords ? ",$3" : ""})`;
+    }, hours) VALUES($1,$2${restaurant.coords ? ",$3" : ""}, $4)`;
     const values = [restaurant.url, restaurant.name];
     if (restaurant.coords) {
       values.push(`(${restaurant.coords.x},${restaurant.coords.y})`);
+    }
+    if (restaurant.open_hours) {
+      values.push(
+        `${restaurant.open_hours.start} - ${restaurant.open_hours.end}`,
+      );
     }
     sqlPromises.push(client.query(query, values));
   });
@@ -191,6 +205,20 @@ export async function clearRestaurantTable() {
   await client.connect();
   await client.query("DELETE FROM restaurant");
   client.end();
+}
+
+export async function updateOpenningHours() {
+  const restaurants = await getRestaurants();
+
+  for (const restaurant of restaurants) {
+    try {
+      const openningHours = await getOpenHours(restaurant.url);
+      console.log(restaurant.url);
+      console.log(openningHours);
+    } catch (e) {
+      console.error(e);
+    }
+  }
 }
 
 export async function updateMeals() {
@@ -246,7 +274,7 @@ export async function updateMeals() {
           id_restaurant: restaurant.id_restaurant,
           type: menu.title,
         },
-        client
+        client,
       );
     }
   }
@@ -267,7 +295,7 @@ export async function updateMeals() {
             key,
             keyword_conf.id_entity,
             keyword_conf.category,
-          ])
+          ]),
         );
       } catch (e) {
         console.error(e);
