@@ -21,7 +21,7 @@ CREATE TABLE restaurant(
     url TEXT,
     name TEXT,
     gpscoord POINT,
-    hours TEXT
+    hour TEXT
 );
 
 CREATE TABLE cat_suggestions(
