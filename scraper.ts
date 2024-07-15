@@ -1,5 +1,14 @@
 import { JSDOM } from "jsdom";
-import { Coords, Foody, MapElement, Meal, RestaurantDetails } from "./types";
+import {
+  ApiResponse,
+  Coords,
+  Foody,
+  MapElement,
+  Meal,
+  RestaurantDetails,
+  School,
+  SchoolApi,
+} from "./types";
 import { OpenHours, Restaurant } from "./controller";
 
 const DAYS = [
@@ -219,4 +228,21 @@ function parseOpenHoursString(value: string): OpenHours {
     start: trimmedValue[0],
     end: trimmedValue[1],
   };
+}
+
+export async function getSchools(): Promise<School[]> {
+  const endpoint =
+    "https://www.herault-data.fr/api/explore/v2.1/catalog/datasets/onisep-etablissements-denseignement-superieur-herault/records?where=statut%20%3D%20%22Public%22&limit=-1";
+  const request = await fetch(endpoint);
+  const response = (await request.json()) as ApiResponse<SchoolApi>;
+  return response.results.map((record) => {
+    return {
+      name: record.sigle || record.nom,
+      long_name: record.nom,
+      coords: {
+        x: record.point_geo.lat,
+        y: record.point_geo.lon,
+      },
+    };
+  });
 }

@@ -1,6 +1,6 @@
 import { Client, QueryResult } from "pg";
 import { getOpenHours, getRestaurantDetails } from "./scraper";
-import { Coords, RestaurantDetails } from "./types";
+import { Coords, RestaurantDetails, School } from "./types";
 import * as dotenv from "dotenv";
 import { readFile } from "fs";
 dotenv.config();
@@ -306,14 +306,24 @@ export async function updateMeals() {
   await client.end();
 }
 
-// async function insertRestaurantsUpdate() {
-//   await clearRestaurantTable();
-//   const restaurants = await insertRestaurants()
-//   await insertRestaurantsInDB(restaurants);
-// }
-// insertRestaurantsUpdate()
-//
-//
-// console.time("took");
-// updateMeals().then(()=> {
-//   console.timeEnd("took");
+export async function insertSchools(schools: School[]): Promise<void> {
+  const query =
+    "INSERT INTO school(name, long_name, coords) VALUES($1, $2, $3)";
+
+  const client = new Client(clientInfo);
+  await client.connect();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sqlPromises: Promise<QueryResult<any>>[] = [];
+  for (const school of schools) {
+    sqlPromises.push(
+      client.query(query, [
+        school.name,
+        school.long_name,
+        `(${school.coords.x},${school.coords.y})`,
+      ]),
+    );
+  }
+
+  await Promise.all(sqlPromises);
+  await client.end();
+}

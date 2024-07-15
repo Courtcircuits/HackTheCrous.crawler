@@ -12,6 +12,7 @@ DROP TABLE IF EXISTS food;
 
 CREATE TABLE school(
     idschool serial PRIMARY KEY,
+    long_name TEXT,
     name TEXT,
     coords POINT
 );

@@ -3,6 +3,7 @@ import {
   clearRestaurantTable,
   createTables,
   insertRestaurantsInDB,
+  insertSchools,
   updateMeals,
   updateOpenningHours,
 } from "./controller";
@@ -10,6 +11,7 @@ import {
   getOpenHours,
   getRestaurantCoordinates,
   getRestaurantUrls,
+  getSchools,
 } from "./scraper";
 import * as dotenv from "dotenv";
 
@@ -62,6 +64,19 @@ program
     console.time("took");
     updateOpenningHours().then(() => {
       console.timeEnd("took");
+    });
+  });
+
+program
+  .command("school")
+  .description("Get schools")
+  .action(() => {
+    console.time("took");
+    getSchools().then((schools) => {
+      insertSchools(schools).then(() => {
+        console.log(schools);
+        console.timeEnd("took");
+      });
     });
   });
 
