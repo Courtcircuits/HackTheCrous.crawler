@@ -1,24 +1,2 @@
-# modules 
-node_modules
-node_modules/
-
-dist/
-
-
-
-# IDE
-.idea
-.vscode
-
-# sensitive
-
-
-
-.env
-credentials.json
-
-# proof of work
-index.cjs
-getCoords.js
-restaurants.csv
-schoolScrapper.cjs
+target/
+target/*
