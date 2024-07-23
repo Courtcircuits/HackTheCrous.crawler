@@ -17,6 +17,7 @@ use dotenv::dotenv;
 async fn main() -> ExitCode {
     dotenv().ok();
     let pg_database = get_env_variable("DATABASE_URL");
+    let now = chrono::Utc::now();
 
     let pool = match pg_database {
         Ok(database) => {
@@ -38,6 +39,7 @@ async fn main() -> ExitCode {
     match result {
         Ok(exit_result) => {
             println!("{}", exit_result.message);
+            println!("took: {}", chrono::Utc::now().signed_duration_since(now));
             exit_result.exit_code
         }
         Err(exit_result) => {

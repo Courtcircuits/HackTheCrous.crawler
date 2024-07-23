@@ -5,16 +5,16 @@ use sqlx::{prelude::FromRow, PgPool};
 
 #[derive(Clone)]
 pub struct RestaurantService {
-    pool: Arc<PgPool>,
+    pub pool: Arc<PgPool>,
 }
 
 #[derive(Debug, FromRow, Serialize, Deserialize)]
 pub struct Restaurant {
-    idrestaurant: String,
-    url: String,
-    name: String,
-    gpscoord: Option<String>,
-    hours: Option<String>,
+    pub idrestaurant: Option<String>,
+    pub url: String,
+    pub name: String,
+    pub gpscoord: Option<String>,
+    pub hours: Option<String>,
 }
 
 impl RestaurantService {
@@ -27,11 +27,16 @@ impl RestaurantService {
     }
 
     pub async fn create(&self, restaurant: Restaurant) -> Result<(), sqlx::Error> {
-        sqlx::query("INSERT INTO restaurant(url, name, gpscord, hours) VALUES ($1, $2, $3, $4)")
+        sqlx::query("INSERT INTO restaurant(url, name) VALUES ($1, $2)")
             .bind(restaurant.url)
             .bind(restaurant.name)
-            .bind(restaurant.gpscoord)
-            .bind(restaurant.hours)
+            .execute(self.pool.as_ref())
+            .await?;
+        Ok(())
+    }
+
+    pub async fn clear(&self) -> Result<(), sqlx::Error> {
+        sqlx::query("DELETE FROM restaurant")
             .execute(self.pool.as_ref())
             .await?;
         Ok(())
