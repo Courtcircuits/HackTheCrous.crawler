@@ -1,3 +1,5 @@
+-- Add migration script here
+
 DROP TABLE IF EXISTS favoriterestaurant;
 DROP TABLE IF EXISTS federal_credentials;
 DROP TABLE IF EXISTS users;
