@@ -8,7 +8,7 @@ pub struct RestaurantService {
     pub pool: Arc<PgPool>,
 }
 
-#[derive(Debug, FromRow, Serialize, Deserialize)]
+#[derive(Debug, FromRow, Serialize, Deserialize, Clone)]
 pub struct Restaurant {
     pub idrestaurant: Option<String>,
     pub url: String,
@@ -18,6 +18,7 @@ pub struct Restaurant {
 }
 
 impl RestaurantService {
+    #[allow(dead_code)]
     pub async fn find_all(&self) -> Result<Vec<Restaurant>, sqlx::Error> {
         let restaurants =
             sqlx::query_as::<_, Restaurant>("SELECT idrestaurant, url, name FROM restaurant")
@@ -27,11 +28,30 @@ impl RestaurantService {
     }
 
     pub async fn create(&self, restaurant: Restaurant) -> Result<(), sqlx::Error> {
-        sqlx::query("INSERT INTO restaurant(url, name) VALUES ($1, $2)")
-            .bind(restaurant.url)
-            .bind(restaurant.name)
-            .execute(self.pool.as_ref())
-            .await?;
+        if restaurant.gpscoord.is_none() {
+            sqlx::query("INSERT INTO restaurant(url, name) VALUES ($1, $2)")
+                .bind(restaurant.url)
+                .bind(restaurant.name)
+                .execute(self.pool.as_ref())
+                .await?;
+            return Ok(());
+        }
+        println!(
+            "restaurant : {} {}",
+            restaurant.clone().name,
+            restaurant.clone().gpscoord.unwrap()
+        );
+        sqlx::query(
+            format!(
+                "INSERT INTO restaurant(url, name, gpscoord) VALUES ($1, $2, {})",
+                restaurant.gpscoord.unwrap()
+            )
+            .as_str(),
+        )
+        .bind(restaurant.url)
+        .bind(restaurant.name)
+        .execute(self.pool.as_ref())
+        .await?;
         Ok(())
     }
 

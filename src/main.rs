@@ -1,11 +1,7 @@
 mod cli;
 mod models;
 
-use std::{
-    env,
-    process::{CommandEnvs, ExitCode},
-    sync::Arc,
-};
+use std::{env, process::ExitCode, sync::Arc};
 
 use cli::{
     actions::{restaurants::RestaurantAction, up::UpAction},

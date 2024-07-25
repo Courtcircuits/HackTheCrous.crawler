@@ -7,9 +7,10 @@ edition = "2021"
 async-trait = "0.1.81"
 chrono = "0.4.38"
 dotenv = "0.15.0"
+futures = "0.3.30"
 reqwest = "0.12.5"
 scraper = "0.19.1"
 serde = { version = "1.0.204", features = ["derive"] }
 serde_json = "1.0.120"
 sqlx = { version = "0.7.4", features = ["postgres", "runtime-tokio"] }
-tokio = { version = "1.38.1", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.38.1", features = ["full", "macros", "rt-multi-thread"] }
