@@ -10,7 +10,7 @@ pub struct RestaurantService {
 
 #[derive(Debug, FromRow, Serialize, Deserialize, Clone)]
 pub struct Restaurant {
-    pub idrestaurant: Option<String>,
+    pub idrestaurant: Option<i32>,
     pub url: String,
     pub name: String,
     pub gpscoord: Option<String>,
@@ -20,10 +20,11 @@ pub struct Restaurant {
 impl RestaurantService {
     #[allow(dead_code)]
     pub async fn find_all(&self) -> Result<Vec<Restaurant>, sqlx::Error> {
-        let restaurants =
-            sqlx::query_as::<_, Restaurant>("SELECT idrestaurant, url, name FROM restaurant")
-                .fetch_all(self.pool.as_ref())
-                .await?;
+        let restaurants = sqlx::query_as::<_, Restaurant>(
+            "SELECT idrestaurant, url, name ,gpscoord, hours FROM restaurant",
+        )
+        .fetch_all(self.pool.as_ref())
+        .await?;
         Ok(restaurants)
     }
 

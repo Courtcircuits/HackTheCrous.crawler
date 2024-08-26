@@ -4,7 +4,7 @@ mod models;
 use std::{env, process::ExitCode, sync::Arc};
 
 use cli::{
-    actions::{restaurants::RestaurantAction, up::UpAction},
+    actions::{meals::MealsAction, restaurants::RestaurantAction, up::UpAction},
     Cli, ExitResult,
 };
 use dotenv::dotenv;
@@ -29,6 +29,7 @@ async fn main() -> ExitCode {
     let result = &Cli::new()
         .subscribe_action("restaurants", RestaurantAction { pool: pool.clone() })
         .subscribe_action("up", UpAction { pool: pool.clone() })
+        .subscribe_action("meals", MealsAction { pool: pool.clone() })
         .execute()
         .await;
 
@@ -46,7 +47,7 @@ async fn main() -> ExitCode {
 }
 
 fn get_env_variable(key: &str) -> Result<String, ExitResult> {
-    env::var(&key).map_err(|_| ExitResult {
+    env::var(key).map_err(|_| ExitResult {
         exit_code: ExitCode::from(2),
         message: format!("{} env variable not found", key),
     })
