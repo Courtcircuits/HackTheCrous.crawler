@@ -1,5 +1,5 @@
 # HackTheCrous.crawler
-A script to aliment [Hack the Crous](https://github.com/Courtcircuits/HackTheCrous.apk) from crous's website. Btw it no longer uses Bun and JSDOM.
+A script to aliment [Hack the Crous](https://hackthecrous.com) from crous's website. Btw it uses Rust.
 
 ## Insert restaurants in database
 ```bash

@@ -1,16 +1,39 @@
-use std::{collections::HashMap, process::ExitCode, sync::Arc};
+use std::{collections::HashMap, error::Error, process::ExitCode, sync::Arc};
 
 use async_trait::async_trait;
+use regex::Regex;
 use scraper::{selectable::Selectable, Html, Selector};
-use sqlx::PgPool;
+use tracing::info;
 
 use crate::{
     cli::{Action, ExitResult},
-    models::restaurants::{self, Restaurant},
+    models::{
+        keywords::{Category, KeywordService},
+        restaurants::{Restaurant, RestaurantService},
+    },
 };
 
 pub struct RestaurantAction {
-    pub pool: Arc<PgPool>,
+    pub restaurant_service: Arc<RestaurantService>,
+    pub keyword_service: Arc<KeywordService>,
+}
+
+pub struct RestaurantDetails {
+    pub restaurant: String,
+    pub gps: String,
+    pub hours: String,
+}
+
+impl RestaurantAction {
+    pub fn new(
+        restaurant_service: Arc<RestaurantService>,
+        keyword_service: Arc<KeywordService>,
+    ) -> Self {
+        Self {
+            restaurant_service,
+            keyword_service,
+        }
+    }
 }
 
 #[async_trait]
@@ -35,7 +58,7 @@ impl Action for RestaurantAction {
                 let restaurant_name = restaurant.name.clone();
                 restaurants_map.insert(restaurant_url.clone(), restaurant.clone());
                 tokio::spawn(async move {
-                    match scrape_coordinates(&restaurant_url).await {
+                    let coordinates = match scrape_coordinates(&restaurant_url).await {
                         Ok(gps) => gps,
                         Err(_) => {
                             println!("{}: no gps", restaurant_name);
@@ -44,6 +67,18 @@ impl Action for RestaurantAction {
                                 gps: "".to_string(),
                             }
                         }
+                    };
+                    let hours = match scrape_hours(&restaurant_url).await {
+                        Ok(hours) => hours,
+                        Err(_) => {
+                            println!("{}: no hours", restaurant_name);
+                            "".to_string()
+                        }
+                    };
+                    RestaurantDetails {
+                        restaurant: coordinates.restaurant,
+                        gps: coordinates.gps,
+                        hours,
                     }
                 })
             })
@@ -52,27 +87,29 @@ impl Action for RestaurantAction {
         let mut restaurants = Vec::new();
 
         for task in tasks {
-            let restaurant_coords = task.await.unwrap();
-            if restaurant_coords.gps.is_empty() {
+            let restaurant_details = task.await.unwrap();
+
+            println!(
+                "[Restaurant ${}] hours -> {}",
+                restaurant_details.restaurant, restaurant_details.hours
+            );
+
+            if restaurant_details.gps.is_empty() {
                 continue;
             }
-            let restaurant = restaurants_map.get(restaurant_coords.restaurant.as_str());
+            let restaurant = restaurants_map.get(restaurant_details.restaurant.as_str());
 
             if restaurant.is_none() {
                 continue;
             }
 
             let mut restaurant = restaurant.unwrap().clone();
-            restaurant.gpscoord = Some(restaurant_coords.gps);
+            restaurant.gpscoord = Some(restaurant_details.gps);
 
             restaurants.push(restaurant);
         }
 
-        let restaurant_service = restaurants::RestaurantService {
-            pool: self.pool.clone(),
-        };
-
-        match restaurant_service.clear().await {
+        match self.restaurant_service.clear().await {
             Ok(_) => (),
             Err(err) => {
                 return Err(ExitResult {
@@ -83,12 +120,28 @@ impl Action for RestaurantAction {
         }
 
         for restaurant in restaurants {
-            match restaurant_service.create(restaurant).await {
-                Ok(_) => (),
+            match self.restaurant_service.create(restaurant).await {
+                Ok(restaurant) => {
+                    for word in restaurant.name.split_whitespace() {
+                        self.keyword_service
+                            .create(
+                                word.to_string(),
+                                i64::from(restaurant.idrestaurant.unwrap()),
+                                Category::Restaurant,
+                            )
+                            .await
+                            .map_err(|err| {
+                                return ExitResult {
+                                    exit_code: ExitCode::from(2),
+                                    message: format!("keyword insertion failed: {}", err),
+                                };
+                            })?;
+                    }
+                }
                 Err(err) => {
                     return Err(ExitResult {
                         exit_code: ExitCode::from(2),
-                        message: format!("insert failed: {}", err),
+                        message: format!("restaurant insertion failed: {}", err),
                     });
                 }
             }
@@ -194,6 +247,51 @@ async fn scrape_coordinates(url: &str) -> Result<RestaurantCoords, Box<dyn std::
         restaurant: url.to_string(),
         gps: format!("point({},{})", lat, long),
     })
+}
+
+async fn scrape_hours(url: &str) -> Result<String, Box<dyn Error>> {
+    let resp = reqwest::get(url).await?.text().await?;
+    let document = Html::parse_document(&resp);
+    let hours_selector = Selector::parse(".info p")?;
+    let hours = document.select(&hours_selector).next();
+    if hours.is_none() {
+        return Err("no hours found".into());
+    }
+    let hours = hours.unwrap().text().collect::<Vec<_>>().join(" ");
+    if url == "https://www.crous-montpellier.fr/restaurant/resto-u-triolet/" {
+        return Ok(parse_hours("du lundi au vendredi de 11h30 à 13h30."));
+    }
+    Ok(parse_hours(hours.as_str()))
+}
+
+fn parse_hours(raw_hour: &str) -> String {
+    let raw_hour = raw_hour.to_lowercase();
+    let re = Regex::new(r"du lundi au vendredi de |du lundi au jeudi de ").unwrap();
+    let hours = re
+        .split(raw_hour.as_str())
+        .collect::<Vec<_>>()
+        .last()
+        .unwrap()
+        .to_string()
+        .replace(".", "")
+        .split(" à ")
+        .collect::<Vec<_>>()
+        .iter()
+        .map(|hour| match hour.split("h").collect::<Vec<_>>() {
+            hour if hour.len() == 2 => {
+                if hour[1].is_empty() {
+                    vec![hour[0], "00"]
+                } else {
+                    hour
+                }
+            }
+            hour if hour.len() == 1 => vec![hour[0], "00"],
+            _ => vec!["00", "00"],
+        })
+        .map(|hour| format!("{}:{}", hour[0], hour[1]))
+        .collect::<Vec<_>>();
+
+    hours.join(" - ")
 }
 
 #[cfg(test)]

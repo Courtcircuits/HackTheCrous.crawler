@@ -12,6 +12,9 @@ use dotenv::dotenv;
 #[tokio::main]
 async fn main() -> ExitCode {
     dotenv().ok();
+
+    tracing_subscriber::fmt::init();
+
     let pg_database = get_env_variable("DATABASE_URL");
     let now = chrono::Utc::now();
 
@@ -26,10 +29,18 @@ async fn main() -> ExitCode {
         }
     };
 
+    let restaurant_service = Arc::new(models::restaurants::RestaurantService::new(pool.clone()));
+    let keyword_service = Arc::new(models::keywords::KeywordService::new(pool.clone()));
+    let meal_service = Arc::new(models::meals::MealService::new(pool.clone()));
+
+    let restaurant_action =
+        RestaurantAction::new(restaurant_service.clone(), keyword_service.clone());
+    let meal_action = MealsAction::new(meal_service, restaurant_service, keyword_service);
+
     let result = &Cli::new()
-        .subscribe_action("restaurants", RestaurantAction { pool: pool.clone() })
+        .subscribe_action("restaurants", restaurant_action)
         .subscribe_action("up", UpAction { pool: pool.clone() })
-        .subscribe_action("meals", MealsAction { pool: pool.clone() })
+        .subscribe_action("meals", meal_action)
         .execute()
         .await;
 

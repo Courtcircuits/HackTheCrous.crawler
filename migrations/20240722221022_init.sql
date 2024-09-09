@@ -84,3 +84,5 @@ CREATE TABLE favoriterestaurant (
     CONSTRAINT ffk_iduser_fr FOREIGN KEY (iduser) REFERENCES users(iduser) ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT fk_idrestaurant_fr FOREIGN KEY (idrestaurant) REFERENCES restaurant(idrestaurant) ON DELETE CASCADE ON UPDATE CASCADE
 );
+
+INSERT INTO cat_suggestions (idcat, namecat) VALUES (1, 'restaurant'), (2, 'food'), (3, 'meal');
