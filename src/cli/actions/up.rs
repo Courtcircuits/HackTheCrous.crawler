@@ -25,4 +25,8 @@ impl Action for UpAction {
             message: "migration done".to_string(),
         })
     }
+
+    fn help(&self) -> &str {
+        return "run the migrations"
+    }
 }

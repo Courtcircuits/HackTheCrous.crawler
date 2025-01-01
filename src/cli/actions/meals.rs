@@ -139,6 +139,10 @@ impl Action for MealsAction {
             message: "meals done".to_string(),
         })
     }
+
+    fn help(&self) -> &str {
+        "scrape meals on all restaurants available in the given database"
+    }
 }
 
 async fn scrape_meals(restaurant: Restaurant) -> Result<Vec<Meal>, Box<dyn std::error::Error>> {

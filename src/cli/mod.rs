@@ -1,7 +1,7 @@
 use std::{collections::HashMap, env, process::ExitCode};
 
 use async_trait::async_trait;
-
+use tracing::info;
 pub struct ExitResult {
     pub exit_code: ExitCode,
     pub message: String,
@@ -12,6 +12,7 @@ pub mod actions;
 #[async_trait]
 pub trait Action {
     async fn execute(&self) -> Result<ExitResult, ExitResult>;
+    fn help(&self) -> &str;
 }
 
 pub struct Cli {
@@ -41,8 +42,23 @@ impl Cli {
             });
         }
 
+        if args.get(1).unwrap() == "help" {
+            println!("htcrawler <action>");
+            println!("available actions are : ");
+            for (key, action) in self.actions.iter() {
+                println!("  {} -> {}",key, action.help());
+            }
+            return Ok(ExitResult {
+                exit_code: ExitCode::from(1),
+                message: "".to_string(),
+            });
+        }
+
         match self.actions.get(args.get(1).unwrap()) {
-            Some(command) => command.execute().await,
+            Some(command) => {
+                info!("Executing action {}", args.get(1).unwrap());
+                command.execute().await
+            },
             None => Err(ExitResult {
                 exit_code: ExitCode::from(2),
                 message: format!("{} command not found", args[1]),

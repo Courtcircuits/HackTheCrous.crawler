@@ -1,7 +1,7 @@
 use std::{process::ExitCode, sync::Arc};
 
 use async_trait::async_trait;
-use sqlx::{PgPool, Pool, Postgres};
+use sqlx::{Pool, Postgres};
 
 use crate::{
     cli::{Action, ExitResult},
@@ -48,5 +48,9 @@ impl Action for BootstrapAction {
             exit_code: ExitCode::SUCCESS,
             message: "Environment bootstrapped successfully".to_string(),
         })
+    }
+
+    fn help(&self) -> &str {
+        "calls every actions up -> restaurants -> meals, so in one action you can bootstrap a new database with all needed data"
     }
 }
