@@ -21,7 +21,7 @@ impl Action for UpAction {
             })?;
 
         Ok(ExitResult {
-            exit_code: ExitCode::from(1),
+            exit_code: ExitCode::from(0),
             message: "migration done".to_string(),
         })
     }

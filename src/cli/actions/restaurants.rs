@@ -3,7 +3,7 @@ use std::{collections::HashMap, error::Error, process::ExitCode, sync::Arc};
 use async_trait::async_trait;
 use regex::Regex;
 use scraper::{selectable::Selectable, Html, Selector};
-use tracing::error;
+use tracing::{error, info};
 
 use crate::{
     cli::{Action, ExitResult},
@@ -115,6 +115,7 @@ impl Action for RestaurantAction {
         for restaurant in restaurants {
             match self.restaurant_service.create(restaurant).await {
                 Ok(restaurant) => {
+                    info!("Found restaurant {}", restaurant.name);
                     for word in restaurant.name.split_whitespace() {
                         self.keyword_service
                             .create(
@@ -124,10 +125,10 @@ impl Action for RestaurantAction {
                             )
                             .await
                             .map_err(|err| {
-                                return ExitResult {
+                                ExitResult {
                                     exit_code: ExitCode::from(2),
                                     message: format!("keyword insertion failed: {}", err),
-                                };
+                                }
                             })?;
                     }
                 }
@@ -141,7 +142,7 @@ impl Action for RestaurantAction {
         }
 
         Ok(ExitResult {
-            exit_code: ExitCode::from(1),
+            exit_code: ExitCode::from(0),
             message: "restaurants in database".to_string(),
         })
     }

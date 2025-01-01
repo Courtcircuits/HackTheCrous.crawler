@@ -156,7 +156,7 @@ impl Action for MealsAction {
         // Collect the results and handle any errors
 
         Ok(ExitResult {
-            exit_code: ExitCode::from(1),
+            exit_code: ExitCode::from(0),
             message: "meals done".to_string(),
         })
     }

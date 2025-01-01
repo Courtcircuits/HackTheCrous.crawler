@@ -45,7 +45,7 @@ impl Action for BootstrapAction {
         self.restaurant_action.execute().await?;
         self.meal_action.execute().await?;
         Ok(ExitResult {
-            exit_code: ExitCode::SUCCESS,
+            exit_code: ExitCode::from(0),
             message: "Environment bootstrapped successfully".to_string(),
         })
     }
