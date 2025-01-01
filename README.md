@@ -1,22 +1,33 @@
 # HackTheCrous.crawler
-A script to aliment [Hack the Crous](https://github.com/Courtcircuits/HackTheCrous.apk) from crous's website. Btw it no longer uses Bun and JSDOM.
 
-## Insert restaurants in database
-```bash
-npm start restaurants
-```
-### Get today's meals [WIP]
-```bash
-npm start meals
-```
+A script to aliment [Hack the Crous](https://hackthecrous.com) from crous's website. Btw it uses Rust now.
 
-## Configure the project
-The .env file must have the following informations :
-```env
+## Prerequisites
+
+- cargo
+- an up and running postgresql database
+
+## Getting started (quick)
+
+Fill a .env file for local dev
+
+```
 DATABASE_URL=
-PG_DATABASE=
-PG_HOST=
-PG_PASSWORD=
-PG_PORT=
-PG_USER=
 ```
+
+And then execute : 
+
+```bash
+cargo run -- <your-action>
+```
+
+Please refer to the next section to get better understanding of all available actions.
+
+## Commands
+
+available actions are :
+
+- restaurants -> scrape restaurants from the given restaurant
+- up -> run the migrations
+- meals -> scrape meals on all restaurants available in the given database
+- bootstrap -> calls every actions up -> restaurants -> meals, so in one action you can bootstrap a new database with all needed data

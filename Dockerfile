@@ -1,12 +1,42 @@
-# this is a job image
-FROM node:21-alpine3.18 AS build
-WORKDIR /app
-COPY . .
-RUN npm install && npm run build
+ARG RUST_VERSION=1.77
+FROM rust:${RUST_VERSION}-buster AS dependency
+WORKDIR /opt/hackthecrous
 
-FROM node:21-alpine3.18 AS production
-WORKDIR /app
-COPY --from=build /app/dist /app/dist
-COPY --from=build /app/node_modules /app/node_modules
-COPY --from=build /app/scripts /app/scripts
-CMD /bin/bash -c
+RUN mkdir -p src && echo "fn main() {}" >> src/main.rs
+
+COPY Cargo.toml .
+COPY Cargo.lock .
+
+RUN cargo fetch
+
+FROM dependency AS build
+
+COPY src src
+COPY migrations migrations
+RUN --mount=type=cache,target=/opt/target/ \
+    --mount=type=bind,source=Cargo.toml,target=Cargo.toml  \
+    --mount=type=bind,source=Cargo.lock,target=Cargo.lock  \
+    --mount=type=cache,target=/usr/local/cargo/registry/ \
+    cargo build --release && \
+    cp ./target/release/HackTheCrous-crawler /bin/crawler
+
+FROM debian:bullseye-slim AS final
+
+# See https://docs.docker.com/develop/develop-images/dockerfile_best-practices/#user
+RUN adduser \
+    --disabled-password \
+    --gecos "" \
+    --home "/nonexistent" \
+    --shell "/sbin/nologin" \
+    --no-create-home \
+    --uid "1000" \
+    appuser
+USER appuser
+
+# Copy the executable from the "build" stage.
+COPY --from=build /bin/crawler /bin/
+COPY migrations /bin/migrations
+
+
+# What the container should run when it is started.
+ENTRYPOINT ["/bin/bash", "-c"]
