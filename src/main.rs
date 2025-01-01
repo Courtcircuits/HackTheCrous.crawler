@@ -1,13 +1,13 @@
 mod cli;
 mod models;
 
+use clap::Parser;
 use std::{env, process::ExitCode, sync::Arc};
 
 use cli::{
     actions::{
         bootstrap::BootstrapAction, meals::MealsAction, restaurants::RestaurantAction, up::UpAction,
-    },
-    Cli, ExitResult,
+    }, App, Cli, Command, ExitResult
 };
 use dotenv::dotenv;
 use tracing::{error, info};
@@ -18,6 +18,7 @@ async fn main() -> ExitCode {
 
     tracing_subscriber::fmt::init();
 
+    let args = App::parse();
     let pg_database = get_env_variable("DATABASE_URL");
     let now = chrono::Utc::now();
 
@@ -53,21 +54,21 @@ async fn main() -> ExitCode {
     );
 
     let result = &Cli::new()
-        .subscribe_action("restaurants", restaurant_action)
-        .subscribe_action("up", UpAction { pool: pool.clone() })
-        .subscribe_action("meals", meal_action)
-        .subscribe_action("bootstrap", bootstrap_action)
-        .execute()
+        .subscribe_action(Command::Restaurants, restaurant_action)
+        .subscribe_action(Command::Up, UpAction { pool: pool.clone() })
+        .subscribe_action(Command::Meals, meal_action)
+        .subscribe_action(Command::Bootstrap, bootstrap_action)
+        .execute(args)
         .await;
 
     match result {
         Ok(exit_result) => {
-            println!("{}", exit_result.message);
-            println!("took: {}", chrono::Utc::now().signed_duration_since(now));
+            info!("{}", exit_result.message);
+            info!("took: {}", chrono::Utc::now().signed_duration_since(now));
             exit_result.exit_code
         }
         Err(exit_result) => {
-            println!("{}", exit_result.message);
+            error!("{}", exit_result.message);
             exit_result.exit_code
         }
     }

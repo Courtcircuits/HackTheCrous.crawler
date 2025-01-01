@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 async-trait = "0.1.81"
 chrono = "0.4.38"
+clap = { version = "4.5.23", features = ["derive"] }
 dotenv = "0.15.0"
 futures = "0.3.30"
 regex = "1.10.6"

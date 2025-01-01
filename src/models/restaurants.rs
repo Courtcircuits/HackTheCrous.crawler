@@ -44,12 +44,6 @@ impl RestaurantService {
             .await?;
             return Ok(restaurant_result);
         }
-        println!(
-            "restaurant : {} {} {:?}",
-            restaurant.clone().name,
-            restaurant.clone().gpscoord.unwrap(),
-            restaurant.clone().hours
-        );
         let restaurant_result = sqlx::query_as::<_, Restaurant>(
             format!(
                 "INSERT INTO restaurant(url, name, hours, gpscoord) VALUES ($1, $2, $3, {}) RETURNING idrestaurant, url, name, gpscoord::text as gpscoord, hours",

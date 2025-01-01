@@ -3,6 +3,7 @@ use std::{collections::HashMap, error::Error, process::ExitCode, sync::Arc};
 use async_trait::async_trait;
 use regex::Regex;
 use scraper::{selectable::Selectable, Html, Selector};
+use tracing::error;
 
 use crate::{
     cli::{Action, ExitResult},
@@ -67,7 +68,7 @@ impl Action for RestaurantAction {
                     let hours = match scrape_hours(&restaurant_url).await {
                         Ok(hours) => hours,
                         Err(_) => {
-                            println!("{}: no hours", restaurant_name);
+                            error!("{}: no hours", restaurant_name);
                             "".to_string()
                         }
                     };
@@ -288,7 +289,6 @@ fn parse_hours(raw_hour: &str) -> String {
         .map(|hour| format!("{}:{}", process_hour(hour[0]), process_hour(hour[1])))
         .collect::<Vec<_>>();
 
-    println!("hours : {:?}", hours);
 
     hours.join(" - ")
 }
@@ -297,7 +297,6 @@ fn process_hour(hour: &str) -> String {
     let mut final_hour = hour.replace(" ", "").to_string();
     while final_hour.len() < 2 {
         final_hour = format!("0{}", final_hour);
-        println!("{}", final_hour);
     }
     final_hour.clone()
 }
@@ -309,7 +308,7 @@ mod tests {
     #[tokio::test]
     async fn test_scrape() {
         let restaurants = scrape().await.unwrap();
-        assert!(restaurants.len() > 0);
+        assert!(!restaurants.is_empty());
     }
 
     #[tokio::test]
