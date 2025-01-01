@@ -1,3 +1,4 @@
+use core::error;
 use std::{collections::HashMap, error::Error, process::ExitCode, sync::Arc};
 
 use async_trait::async_trait;
@@ -41,7 +42,15 @@ impl Action for RestaurantAction {
     async fn execute(&self) -> Result<ExitResult, ExitResult> {
         let mut restaurants = match scrape().await {
             Ok(restaurants) => restaurants,
-            Err(_) => {
+            Err(err) => {
+                match err {
+                    RestaurantError::Reqwest(message) => {
+                        error!("[REQWEST ISSUE] {}",message);
+                    },
+                    RestaurantError::DomIssue(message) => {
+                        error!("[DOM ISSUE] {}", message);
+                    }
+                };
                 return Err(ExitResult {
                     exit_code: ExitCode::from(2),
                     message: format!("scraping failed: {}", ""),
@@ -152,21 +161,28 @@ impl Action for RestaurantAction {
     }
 }
 
-async fn scrape() -> Result<Vec<Restaurant>, Box<dyn std::error::Error>> {
+#[derive(Debug)]
+enum RestaurantError{
+    Reqwest(String),
+    DomIssue(String)
+}
+
+async fn scrape() -> Result<Vec<Restaurant>, RestaurantError> {
     let url = "https://www.crous-montpellier.fr/se-restaurer/ou-manger/";
-    let resp = reqwest::get(url).await?;
-    let text_resp = resp.text().await?;
+    let resp = reqwest::get(url).await.map_err(|_| RestaurantError::Reqwest("Couldn't get restaurants page".to_string()))?;
+    let text_resp = resp.text().await.map_err(|_| RestaurantError::Reqwest("Couldn't convert restaurants page to text".to_string()))?;
     let document = Html::parse_document(&text_resp);
-    let restaurant_selector = Selector::parse(".vc_restaurants ul li a")?;
+    let restaurant_selector = Selector::parse(".vc_restaurants ul li a").map_err(|e| RestaurantError::DomIssue(format!("element not found {} error : {}", ".vc_restaurants ul li a", e)))?;
 
     let elements = document.select(&restaurant_selector);
 
     let mut restaurants = Vec::new();
 
     for restaurant_element in elements {
-        let city_selector = Selector::parse(".restaurant_area")?;
+        let city_selector = Selector::parse(".restaurant_area").unwrap();
 
-        if None == restaurant_element.select(&city_selector).next() {
+        if restaurant_element.select(&city_selector).next().is_none() {
+            error!("couldn't select .restaurant_area");
             continue;
         }
 
@@ -185,6 +201,7 @@ async fn scrape() -> Result<Vec<Restaurant>, Box<dyn std::error::Error>> {
         let restaurant_url = restaurant_element.value().attr("href");
 
         if restaurant_url.is_none() {
+            error!("Restaurant url not found");
             continue;
         }
 
