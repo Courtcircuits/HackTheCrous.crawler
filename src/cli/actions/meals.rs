@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     cli::{Action, ExitResult},
     models::{
-        keywords::{Category, Keyword, KeywordService},
+        keywords::{Category, KeywordService},
         meals::{Meal, MealService},
         restaurants::{Restaurant, RestaurantService},
     },
@@ -85,6 +85,16 @@ impl Action for MealsAction {
                 .collect(),
             Err(exit_result) => return Err(exit_result),
         };
+
+        match self.meal_service.clean().await {
+            Ok(_) => (),
+            Err(err) => {
+                return Err(ExitResult {
+                    exit_code: ExitCode::from(2),
+                    message: format!("clear failed: {}", err),
+                })
+            }
+        }
 
         for task in tasks {
             match task.await {
@@ -254,5 +264,7 @@ fn parse_date(date: String) -> chrono::DateTime<chrono::Utc> {
                 .unwrap();
         }
     }
-    return chrono::Utc.ymd(year as i32, month, day).and_hms(0, 0, 0);
+    chrono::Utc
+        .with_ymd_and_hms(year as i32, month, day, 0, 0, 0)
+        .unwrap()
 }

@@ -35,28 +35,31 @@ impl RestaurantService {
     pub async fn create(&self, restaurant: Restaurant) -> Result<Restaurant, sqlx::Error> {
         if restaurant.gpscoord.is_none() {
             let restaurant_result = sqlx::query_as::<_, Restaurant>(
-                "INSERT INTO restaurant(url, name) VALUES ($1, $2) RETURNING idrestaurant, url, name, gpscoord::text as gpscoord, hours",
+                "INSERT INTO restaurant(url, name, hours) VALUES ($1, $2, $3) RETURNING idrestaurant, url, name, gpscoord::text as gpscoord, hours",
             )
             .bind(restaurant.url)
             .bind(restaurant.name)
+            .bind(restaurant.hours)
             .fetch_one(self.pool.as_ref())
             .await?;
             return Ok(restaurant_result);
         }
         println!(
-            "restaurant : {} {}",
+            "restaurant : {} {} {:?}",
             restaurant.clone().name,
-            restaurant.clone().gpscoord.unwrap()
+            restaurant.clone().gpscoord.unwrap(),
+            restaurant.clone().hours
         );
         let restaurant_result = sqlx::query_as::<_, Restaurant>(
             format!(
-                "INSERT INTO restaurant(url, name, gpscoord) VALUES ($1, $2, {}) RETURNING idrestaurant, url, name, gpscoord::text as gpscoord, hours",
+                "INSERT INTO restaurant(url, name, hours, gpscoord) VALUES ($1, $2, $3, {}) RETURNING idrestaurant, url, name, gpscoord::text as gpscoord, hours",
                 restaurant.gpscoord.unwrap()
             )
             .as_str(),
         )
         .bind(restaurant.url)
         .bind(restaurant.name)
+        .bind(restaurant.hours)
         .fetch_one(self.pool.as_ref())
         .await?;
         Ok(restaurant_result)

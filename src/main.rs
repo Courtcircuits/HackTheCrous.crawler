@@ -4,10 +4,13 @@ mod models;
 use std::{env, process::ExitCode, sync::Arc};
 
 use cli::{
-    actions::{meals::MealsAction, restaurants::RestaurantAction, up::UpAction},
+    actions::{
+        bootstrap::BootstrapAction, meals::MealsAction, restaurants::RestaurantAction, up::UpAction,
+    },
     Cli, ExitResult,
 };
 use dotenv::dotenv;
+use tracing::{error, info};
 
 #[tokio::main]
 async fn main() -> ExitCode {
@@ -20,11 +23,12 @@ async fn main() -> ExitCode {
 
     let pool = match pg_database {
         Ok(database) => {
+            info!(database);
             let pool = sqlx::PgPool::connect(&database).await.unwrap();
             Arc::new(pool)
         }
         Err(err) => {
-            println!("{}", err.message);
+            error!("{}", err.message);
             return err.exit_code;
         }
     };
@@ -35,12 +39,24 @@ async fn main() -> ExitCode {
 
     let restaurant_action =
         RestaurantAction::new(restaurant_service.clone(), keyword_service.clone());
-    let meal_action = MealsAction::new(meal_service, restaurant_service, keyword_service);
+    let meal_action = MealsAction::new(
+        meal_service.clone(),
+        restaurant_service.clone(),
+        keyword_service.clone(),
+    );
+
+    let bootstrap_action = BootstrapAction::new(
+        pool.clone(),
+        meal_service.clone(),
+        restaurant_service.clone(),
+        keyword_service.clone(),
+    );
 
     let result = &Cli::new()
         .subscribe_action("restaurants", restaurant_action)
         .subscribe_action("up", UpAction { pool: pool.clone() })
         .subscribe_action("meals", meal_action)
+        .subscribe_action("bootstrap", bootstrap_action)
         .execute()
         .await;
 

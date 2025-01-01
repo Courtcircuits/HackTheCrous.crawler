@@ -3,7 +3,6 @@ use std::{collections::HashMap, error::Error, process::ExitCode, sync::Arc};
 use async_trait::async_trait;
 use regex::Regex;
 use scraper::{selectable::Selectable, Html, Selector};
-use tracing::info;
 
 use crate::{
     cli::{Action, ExitResult},
@@ -60,13 +59,10 @@ impl Action for RestaurantAction {
                 tokio::spawn(async move {
                     let coordinates = match scrape_coordinates(&restaurant_url).await {
                         Ok(gps) => gps,
-                        Err(_) => {
-                            println!("{}: no gps", restaurant_name);
-                            RestaurantCoords {
-                                restaurant: "".to_string(),
-                                gps: "".to_string(),
-                            }
-                        }
+                        Err(_) => RestaurantCoords {
+                            restaurant: "".to_string(),
+                            gps: "".to_string(),
+                        },
                     };
                     let hours = match scrape_hours(&restaurant_url).await {
                         Ok(hours) => hours,
@@ -89,11 +85,6 @@ impl Action for RestaurantAction {
         for task in tasks {
             let restaurant_details = task.await.unwrap();
 
-            println!(
-                "[Restaurant ${}] hours -> {}",
-                restaurant_details.restaurant, restaurant_details.hours
-            );
-
             if restaurant_details.gps.is_empty() {
                 continue;
             }
@@ -105,6 +96,7 @@ impl Action for RestaurantAction {
 
             let mut restaurant = restaurant.unwrap().clone();
             restaurant.gpscoord = Some(restaurant_details.gps);
+            restaurant.hours = Some(restaurant_details.hours);
 
             restaurants.push(restaurant);
         }
@@ -183,7 +175,7 @@ async fn scrape() -> Result<Vec<Restaurant>, Box<dyn std::error::Error>> {
         if !city.eq_ignore_ascii_case("Montpellier") && !city.eq_ignore_ascii_case("Sète") {
             continue;
         }
-
+        
         let restaurant_url = restaurant_element.value().attr("href");
 
         if restaurant_url.is_none() {
@@ -258,7 +250,8 @@ async fn scrape_hours(url: &str) -> Result<String, Box<dyn Error>> {
         return Err("no hours found".into());
     }
     let hours = hours.unwrap().text().collect::<Vec<_>>().join(" ");
-    if url == "https://www.crous-montpellier.fr/restaurant/resto-u-triolet/" {
+    if url == "https://www.crous-montpellier.fr/restaurant/resto-u-triolet/" { //this doesn't scale
+        //very well since it's hardcoded
         return Ok(parse_hours("du lundi au vendredi de 11h30 à 13h30."));
     }
     Ok(parse_hours(hours.as_str()))
@@ -288,10 +281,21 @@ fn parse_hours(raw_hour: &str) -> String {
             hour if hour.len() == 1 => vec![hour[0], "00"],
             _ => vec!["00", "00"],
         })
-        .map(|hour| format!("{}:{}", hour[0], hour[1]))
+        .map(|hour| format!("{}:{}", process_hour(hour[0]), process_hour(hour[1])))
         .collect::<Vec<_>>();
 
+    println!("hours : {:?}", hours);
+
     hours.join(" - ")
+}
+
+fn process_hour(hour: &str) -> String {
+    let mut final_hour = hour.replace(" ", "").to_string();
+    while final_hour.len() < 2 {
+        final_hour = format!("0{}", final_hour);
+        println!("{}", final_hour);
+    }
+    final_hour.clone()
 }
 
 #[cfg(test)]

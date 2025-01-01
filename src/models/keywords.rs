@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use sqlx::PgPool;
 
-#[derive(Debug)]
 pub struct Keyword {
     pub idsuggestion: i64,
     pub keyword: String,

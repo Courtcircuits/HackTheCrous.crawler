@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use sqlx::PgPool;
 
-use crate::cli::actions::meals::{Foody, MealHTML};
+use crate::cli::actions::meals::Foody;
 
 #[derive(Clone)]
 pub struct MealService {
