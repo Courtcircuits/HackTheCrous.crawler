@@ -1,8 +1,7 @@
-use std::{error::Error, process::ExitCode, sync::Arc};
+use std::{process::ExitCode, sync::Arc};
 
 use async_trait::async_trait;
 use chrono::TimeZone;
-use futures::TryFutureExt;
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
 use tracing::{error, info};
@@ -183,9 +182,9 @@ async fn scrape_meals(restaurant: Restaurant) -> Result<Vec<Meal>, MealError> {
         .await
         .map_err(|e| MealError::Reqwest(format!("Reqwest to text error : {}", e)))?;
     let document = Html::parse_document(&resp);
-    let menu_selector = Selector::parse(".menu").map_err(|e| MealError::NoMenuFound)?;
+    let menu_selector = Selector::parse(".menu").map_err(|_| MealError::NoMenuFound)?;
     let menu_element = document.select(&menu_selector);
-    let date_selector = Selector::parse(".menu_date_title").map_err(|e| MealError::NoMenuFound)?;
+    let date_selector = Selector::parse(".menu_date_title").map_err(|_| MealError::NoMenuFound)?;
     let date_element = menu_element
         .clone()
         .next()
