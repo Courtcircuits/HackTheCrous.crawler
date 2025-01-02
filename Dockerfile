@@ -11,14 +11,17 @@ RUN cargo fetch
 
 FROM dependency AS build
 
+RUN rustup target add x86_64-unknown-linux-musl
+RUN apt-get update && apt-get install -y musl-tools
+
 COPY src src
 COPY migrations migrations
 RUN --mount=type=cache,target=/opt/target/ \
     --mount=type=bind,source=Cargo.toml,target=Cargo.toml  \
     --mount=type=bind,source=Cargo.lock,target=Cargo.lock  \
     --mount=type=cache,target=/usr/local/cargo/registry/ \
-    cargo build --release && \
-    cp ./target/release/HackTheCrous-crawler /bin/crawler
+    cargo build --target=x86_64-unknown-linux-musl --release && \
+    cp ./target/x86_64-unknown-linux-musl/release/HackTheCrous-crawler /bin/crawler
 
 FROM debian:bullseye-slim AS final
 
@@ -36,7 +39,6 @@ USER appuser
 # Copy the executable from the "build" stage.
 COPY --from=build /bin/crawler /bin/
 COPY migrations /bin/migrations
-
 
 # What the container should run when it is started.
 ENTRYPOINT ["/bin/bash", "-c"]
