@@ -6,8 +6,8 @@ use std::{env, process::ExitCode, sync::Arc};
 
 use cli::{
     actions::{
-        bootstrap::BootstrapAction, meals::MealsAction, restaurants::RestaurantAction, up::UpAction,
-    }, App, Cli, Command, ExitResult
+        bootstrap::BootstrapAction, meals::MealsAction, ping::PingAction, restaurants::RestaurantAction, up::UpAction
+    }, Action, App, Cli, Command, ExitResult
 };
 use dotenv::dotenv;
 use tracing::{error, info};
@@ -21,6 +21,19 @@ async fn main() -> ExitCode {
     let args = App::parse();
     let pg_database = get_env_variable("DATABASE_URL");
     let now = chrono::Utc::now();
+
+    if args.ping {
+        match PingAction::new("https://www.crous-montpellier.fr/se-restaurer/ou-manger/").execute().await {
+            Ok(res) => {
+                info!("{}", res.message);
+            }
+            Err(res) => {
+                error!("{}", res.message);
+                return res.exit_code;
+            }
+        }
+    }
+
 
     let pool = match pg_database {
         Ok(database) => {

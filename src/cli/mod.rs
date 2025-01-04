@@ -23,7 +23,10 @@ pub struct Cli {
 #[clap(name = "htcrawler", version)]
 pub struct App{
     #[clap(subcommand)]
-    action: Command
+    action: Command,
+
+    #[clap(short,long, default_value_t = false)]
+    pub ping: bool,
 }
 
 #[derive(Debug, Subcommand, PartialEq, Eq, Hash)]
@@ -31,7 +34,8 @@ pub enum Command {
     Restaurants,
     Meals,
     Up,
-    Bootstrap
+    Bootstrap,
+    Ping
 }
 
 impl Cli {
