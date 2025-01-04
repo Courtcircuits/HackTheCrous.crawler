@@ -1,7 +1,9 @@
 mod cli;
 mod models;
+mod telemetry;
 
 use clap::Parser;
+use telemetry::log::init_logger;
 use std::{env, process::ExitCode, sync::Arc};
 
 use cli::{
@@ -16,10 +18,13 @@ use tracing::{error, info};
 async fn main() -> ExitCode {
     dotenv().ok();
 
-    tracing_subscriber::fmt::init();
+    
+    match get_env_variable("LOKI_ENDPOINT") {
+        Ok(endpoint) => init_logger(Some(endpoint)).await,
+        Err(_) => init_logger(None).await,
+    }
 
     let args = App::parse();
-    let pg_database = get_env_variable("DATABASE_URL");
     let now = chrono::Utc::now();
 
     if args.ping {
@@ -34,7 +39,7 @@ async fn main() -> ExitCode {
         }
     }
 
-
+    let pg_database = get_env_variable("DATABASE_URL");
     let pool = match pg_database {
         Ok(database) => {
             info!(database);
