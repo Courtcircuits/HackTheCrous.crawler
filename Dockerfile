@@ -26,6 +26,7 @@ RUN --mount=type=cache,target=/opt/target/ \
 FROM debian:bullseye-slim AS final
 
 # See https://docs.docker.com/develop/develop-images/dockerfile_best-practices/#user
+RUN apt-get update && apt-get install --no-install-recommends -y ca-certificates && apt-get clean -- rm -rf /var/lib/apt/lists/*
 RUN adduser \
     --disabled-password \
     --gecos "" \
