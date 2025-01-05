@@ -1,5 +1,5 @@
-ARG RUST_VERSION=1.77
-FROM rust:${RUST_VERSION}-buster AS dependency
+ARG RUST_VERSION=1.81
+FROM rust:${RUST_VERSION}-bullseye AS dependency
 WORKDIR /opt/hackthecrous
 
 RUN mkdir -p src && echo "fn main() {}" >> src/main.rs
@@ -26,7 +26,7 @@ RUN --mount=type=cache,target=/opt/target/ \
 FROM debian:bullseye-slim AS final
 
 # See https://docs.docker.com/develop/develop-images/dockerfile_best-practices/#user
-RUN apt-get update && apt-get install --no-install-recommends -y ca-certificates && apt-get clean -- rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install --no-install-recommends -y ca-certificates && apt-get clean && rm -rf /var/lib/apt/lists/*
 RUN adduser \
     --disabled-password \
     --gecos "" \
