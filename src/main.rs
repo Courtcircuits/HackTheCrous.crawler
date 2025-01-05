@@ -19,12 +19,12 @@ async fn main() -> ExitCode {
     dotenv().ok();
 
     
+    let args = App::parse();
     match get_env_variable("LOKI_ENDPOINT") {
-        Ok(endpoint) => init_logger(Some(endpoint)).await,
-        Err(_) => init_logger(None).await,
+        Ok(endpoint) => init_logger(Some(endpoint), &args.action).await,
+        Err(_) => init_logger(None, &args.action).await,
     }
 
-    let args = App::parse();
     let now = chrono::Utc::now();
 
     if args.ping {

@@ -3,10 +3,12 @@ use std::io;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, Layer};
 use url::Url;
 
-pub async fn init_logger(loki_endpoint: Option<String>){
+use crate::cli;
+
+pub async fn init_logger(loki_endpoint: Option<String>, subcommand: &cli::Command){
     match loki_endpoint {
         Some(endpoint) => {
-            loki_logger(endpoint).await.unwrap();
+            loki_logger(endpoint, subcommand).await.unwrap();
         }
         None => {
             default_logger();
@@ -18,7 +20,7 @@ fn default_logger() {
     tracing_subscriber::fmt::init();
 }
 
-async fn loki_logger(loki_endpoint: String) -> Result<(), tracing_loki::Error> {
+async fn loki_logger(loki_endpoint: String, subcommand: &cli::Command) -> Result<(), tracing_loki::Error> {
     let std_layer = tracing_subscriber::fmt::layer()
         .pretty()
         .with_writer(io::stdout)
@@ -27,7 +29,7 @@ async fn loki_logger(loki_endpoint: String) -> Result<(), tracing_loki::Error> {
 
 
     let (layer, background_task) = tracing_loki::builder()
-        .label("host", "mine")? //to change with relevant name
+        .label("job", subcommand.as_str())? //to change with relevant name
         .build_url(Url::parse(&loki_endpoint).unwrap())?;
     
     

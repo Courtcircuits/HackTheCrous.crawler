@@ -23,7 +23,7 @@ pub struct Cli {
 #[clap(name = "htcrawler", version)]
 pub struct App{
     #[clap(subcommand)]
-    action: Command,
+    pub action: Command,
 
     #[clap(short,long, default_value_t = false)]
     pub ping: bool,
@@ -36,6 +36,18 @@ pub enum Command {
     Up,
     Bootstrap,
     Ping
+}
+
+impl Command {
+    pub fn as_str(&self) -> &str {
+        match *self {
+            Self::Restaurants => "restaurant",
+            Self::Meals => "meals",
+            Self::Up => "up",
+            Self::Ping => "ping",
+            Self::Bootstrap => "bootstap",
+        }
+    }
 }
 
 impl Cli {

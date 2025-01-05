@@ -13,7 +13,11 @@ Fill a .env file for local dev
 
 ```
 DATABASE_URL=
+LOKI_ENDPOINT=
 ```
+
+⚠️  the `LOKI_ENDPOINT` is optional. If it is not set, the logger will fallback to the default `tracing` logger.
+
 
 And then execute : 
 
