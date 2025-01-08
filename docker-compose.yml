@@ -4,6 +4,14 @@ networks:
   loki:
 
 services:
+  tempo:
+    image: "grafana/tempo:2.1.1"
+    ports:
+      - "3200:3200"    # Tempo
+      - "4317:4317"    # OTLP GRPC
+      - "14268:14268"  # Jaeger
+    networks:
+      - loki
   loki:
     image: grafana/loki:2.9.2
     ports:

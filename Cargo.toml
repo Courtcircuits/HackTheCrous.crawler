@@ -9,6 +9,8 @@ chrono = "0.4.38"
 clap = { version = "4.5.23", features = ["derive"] }
 dotenv = "0.15.0"
 futures = "0.3.30"
+opentelemetry = {version = "0.27.1", features = ["trace"]}
+opentelemetry-otlp = {version = "0.27.0", features = ["trace"]}
 regex = "1.10.6"
 reqwest = { version = "0.12.5", features = ["native-tls-vendored"]}
 scraper = "0.19.1"
@@ -18,5 +20,9 @@ sqlx = { version = "0.7.4", features = ["chrono", "postgres", "runtime-tokio"] }
 tokio = { version = "1.38.1", features = ["full", "macros", "rt-multi-thread"] }
 tracing = "0.1.40"
 tracing-loki = "0.2.5"
-tracing-subscriber = {version = "0.3.18", features = ["env-filter"]}
+tracing-subscriber = {version = "0.3.18", features = ["env-filter", "registry", "std"]}
 url = "2.5.4"
+opentelemetry_sdk = { version = "0.27.0", default-features = false, features = ["trace", "rt-tokio"] }
+tracing-opentelemetry = "0.28.0"
+opentelemetry-stdout = "0.27.0"
+

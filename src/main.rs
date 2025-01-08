@@ -12,18 +12,20 @@ use cli::{
     }, Action, App, Cli, Command, ExitResult
 };
 use dotenv::dotenv;
-use tracing::{error, info};
+use tracing::{error, info, span, Level};
 
 #[tokio::main]
 async fn main() -> ExitCode {
     dotenv().ok();
-
     
     let args = App::parse();
     match get_env_variable("LOKI_ENDPOINT") {
         Ok(endpoint) => init_logger(Some(endpoint), &args.action).await,
         Err(_) => init_logger(None, &args.action).await,
     }
+
+    let span = span!(Level::TRACE, "my_span");
+    let _entre = span.enter();
 
     let now = chrono::Utc::now();
 
