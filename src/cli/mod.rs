@@ -35,7 +35,8 @@ pub enum Command {
     Meals,
     Up,
     Bootstrap,
-    Ping
+    Ping,
+    Schools
 }
 
 impl Command {
@@ -46,6 +47,7 @@ impl Command {
             Self::Up => "up",
             Self::Ping => "ping",
             Self::Bootstrap => "bootstap",
+            Self::Schools => "schools",
         }
     }
 }

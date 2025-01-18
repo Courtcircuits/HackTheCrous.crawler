@@ -8,7 +8,7 @@ use std::{env, process::ExitCode, sync::Arc};
 
 use cli::{
     actions::{
-        bootstrap::BootstrapAction, meals::MealsAction, ping::PingAction, restaurants::RestaurantAction, up::UpAction
+        bootstrap::BootstrapAction, meals::MealsAction, ping::PingAction, restaurants::RestaurantAction, schools::SchoolAction, up::UpAction
     }, Action, App, Cli, Command, ExitResult
 };
 use dotenv::dotenv;
@@ -58,6 +58,10 @@ async fn main() -> ExitCode {
     let keyword_service = Arc::new(models::keywords::KeywordService::new(pool.clone()));
     let meal_service = Arc::new(models::meals::MealService::new(pool.clone()));
 
+    let school_service = Arc::new(models::schools::SchoolService::new(pool.clone()));
+
+    let school_action = SchoolAction::new(school_service.clone());
+
     let restaurant_action =
         RestaurantAction::new(restaurant_service.clone(), keyword_service.clone());
     let meal_action = MealsAction::new(
@@ -78,6 +82,7 @@ async fn main() -> ExitCode {
         .subscribe_action(Command::Up, UpAction { pool: pool.clone() })
         .subscribe_action(Command::Meals, meal_action)
         .subscribe_action(Command::Bootstrap, bootstrap_action)
+        .subscribe_action(Command::Schools, school_action)
         .execute(args)
         .await;
 
