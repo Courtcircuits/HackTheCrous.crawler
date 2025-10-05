@@ -5,22 +5,25 @@ use sqlx::{Pool, Postgres};
 
 use crate::{
     cli::{Action, ExitResult},
-    models::{keywords::KeywordService, meals::MealService, restaurants::RestaurantService},
+    repositories::postgres::{
+        keywords::KeywordService, meals::PostgresMealService,
+        restaurants::PostgresRestaurantService, schools::PostgresSchoolService,
+    },
 };
 
 use super::{meals::MealsAction, restaurants::RestaurantAction, up::UpAction};
 
 pub struct BootstrapAction {
     pub meal_action: Arc<MealsAction>,
-    pub restaurant_action: Arc<RestaurantAction>,
+    pub restaurant_action: Arc<RestaurantAction<PostgresRestaurantService>>,
     pub up_action: Arc<UpAction>,
 }
 
 impl BootstrapAction {
     pub fn new(
         pool: Arc<Pool<Postgres>>,
-        meal_service: Arc<MealService>,
-        restaurants_service: Arc<RestaurantService>,
+        meal_service: Arc<PostgresMealService>,
+        restaurants_service: Arc<PostgresRestaurantService>,
         keyword_service: Arc<KeywordService>,
     ) -> Self {
         Self {

@@ -8,16 +8,20 @@ use tracing::{error, info};
 
 use crate::{
     cli::{Action, ExitResult},
-    models::{
-        keywords::{Category, KeywordService},
-        meals::{Meal, MealService},
-        restaurants::{Restaurant, RestaurantService},
+    repositories::{
+        meals::MealService,
+        postgres::{
+            keywords::{Category, KeywordService},
+            meals::{Meal, PostgresMealService},
+            restaurants::{PostgresRestaurantService, Restaurant},
+        },
+        restaurants::RestaurantService,
     },
 };
 
 pub struct MealsAction {
-    pub meal_service: Arc<MealService>,
-    pub restaurants_service: Arc<RestaurantService>,
+    pub meal_service: Arc<PostgresMealService>,
+    pub restaurants_service: Arc<PostgresRestaurantService>,
     pub keyword_service: Arc<KeywordService>,
 }
 
@@ -36,8 +40,8 @@ pub struct Foody {
 
 impl MealsAction {
     pub fn new(
-        meal_service: Arc<MealService>,
-        restaurants_service: Arc<RestaurantService>,
+        meal_service: Arc<PostgresMealService>,
+        restaurants_service: Arc<PostgresRestaurantService>,
         keyword_service: Arc<KeywordService>,
     ) -> Self {
         Self {
@@ -65,11 +69,9 @@ impl Action for MealsAction {
                 }
                 restaurants_url
             })
-            .map_err(|e| {
-                ExitResult {
-                    exit_code: ExitCode::from(2),
-                    message: format!("can't find restaurants: {}", e),
-                }
+            .map_err(|e| ExitResult {
+                exit_code: ExitCode::from(2),
+                message: format!("can't find restaurants: {:?}", e),
             });
 
         let tasks: Vec<_> = match restaurants {
@@ -81,11 +83,14 @@ impl Action for MealsAction {
                             Ok(meals) => {
                                 info!("[{}] menu found", restaurant.name);
                                 meals
-                            },
+                            }
                             Err(err) => {
                                 match err {
                                     MealError::DomIssue(element) => {
-                                        error!("[{}] couldn't find element in DOM : {}",restaurant.name,  element);
+                                        error!(
+                                            "[{}] couldn't find element in DOM : {}",
+                                            restaurant.name, element
+                                        );
                                     }
                                     MealError::NoMenuFound => {
                                         error!("[{}] no menu found", restaurant.name);
@@ -94,11 +99,11 @@ impl Action for MealsAction {
                                         error!("[{}] no date found", restaurant.name);
                                     }
                                     MealError::Reqwest(message) => {
-                                        error!("[{}] {}",restaurant.name, message);
+                                        error!("[{}] {}", restaurant.name, message);
                                     }
                                 };
                                 Vec::new()
-                            },
+                            }
                         }
                     })
                 })
@@ -111,7 +116,7 @@ impl Action for MealsAction {
             Err(err) => {
                 return Err(ExitResult {
                     exit_code: ExitCode::from(2),
-                    message: format!("clear failed: {}", err),
+                    message: format!("clear failed: {:?}", err),
                 })
             }
         }
@@ -131,17 +136,15 @@ impl Action for MealsAction {
                                                 Category::Food,
                                             )
                                             .await
-                                            .map_err(|e| {
-                                                ExitResult {
-                                                    exit_code: ExitCode::from(2),
-                                                    message: format!("can't create keyword: {}", e),
-                                                }
+                                            .map_err(|e| ExitResult {
+                                                exit_code: ExitCode::from(2),
+                                                message: format!("can't create keyword: {}", e),
                                             })?;
                                     }
                                 }
                             }
                             Err(e) => {
-                                error!("error: {}", e);
+                                error!("error: {:?}", e);
                             }
                         }
                     }
@@ -169,7 +172,7 @@ pub enum MealError {
     NoMenuFound,
     NoDateFound,
     DomIssue(String),
-    Reqwest(String)
+    Reqwest(String),
 }
 
 async fn scrape_meals(restaurant: Restaurant) -> Result<Vec<Meal>, MealError> {
@@ -185,10 +188,7 @@ async fn scrape_meals(restaurant: Restaurant) -> Result<Vec<Meal>, MealError> {
     let menu_selector = Selector::parse(".menu").map_err(|_| MealError::NoMenuFound)?;
     let menu_element = document.select(&menu_selector);
     let date_selector = Selector::parse(".menu_date_title").map_err(|_| MealError::NoMenuFound)?;
-    let date_element = menu_element
-        .clone()
-        .next()
-        .ok_or(MealError::NoDateFound)?;
+    let date_element = menu_element.clone().next().ok_or(MealError::NoDateFound)?;
 
     let date_element = date_element.select(&date_selector);
 
@@ -199,7 +199,8 @@ async fn scrape_meals(restaurant: Restaurant) -> Result<Vec<Meal>, MealError> {
         .text()
         .collect::<String>();
 
-    let meal_selector = Selector::parse(".meal").map_err(|_| MealError::DomIssue(".meal".to_string()))?;
+    let meal_selector =
+        Selector::parse(".meal").map_err(|_| MealError::DomIssue(".meal".to_string()))?;
     let meal_element = menu_element
         .clone()
         .next()
@@ -210,7 +211,8 @@ async fn scrape_meals(restaurant: Restaurant) -> Result<Vec<Meal>, MealError> {
 
     for meal in meal_element {
         // select .meal_title inside of meal
-        let meal_title_selector = Selector::parse(".meal_title").map_err(|_| MealError::DomIssue(".meal_title".to_string()))?;
+        let meal_title_selector = Selector::parse(".meal_title")
+            .map_err(|_| MealError::DomIssue(".meal_title".to_string()))?;
         let meal_title_element = meal.select(&meal_title_selector);
         let meal_title = meal_title_element
             .into_iter()
@@ -219,7 +221,8 @@ async fn scrape_meals(restaurant: Restaurant) -> Result<Vec<Meal>, MealError> {
             .text()
             .collect::<String>();
 
-        let meal_foodies_selector = Selector::parse("ul.meal_foodies > li").map_err(|_| MealError::DomIssue("ul.meal_foodies > li".to_string()))?;
+        let meal_foodies_selector = Selector::parse("ul.meal_foodies > li")
+            .map_err(|_| MealError::DomIssue("ul.meal_foodies > li".to_string()))?;
 
         let meal_foodies_element = meal.select(&meal_foodies_selector);
 
@@ -233,7 +236,8 @@ async fn scrape_meals(restaurant: Restaurant) -> Result<Vec<Meal>, MealError> {
                 .unwrap()
                 .to_string();
 
-            let foodie_content_selector = Selector::parse("ul li").map_err(|_| MealError::DomIssue("ul li".to_string()))?;
+            let foodie_content_selector =
+                Selector::parse("ul li").map_err(|_| MealError::DomIssue("ul li".to_string()))?;
             let foodie_content_element = meal_foodie.select(&foodie_content_selector);
 
             let mut foodie_content: Vec<String> = Vec::new();

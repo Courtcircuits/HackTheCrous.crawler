@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package hackthecrous.meals;
+
+message MealRequest { string restaurant_id = 1; }
+message Meal {
+  string typemeal = 1;
+  repeated Foody foodies = 2;
+  string day = 3;
+  int64 idrestaurant = 4;
+}
+
+message Foody {
+  string type = 1;
+  // this will be a serialized array
+  string content = 2;
+}

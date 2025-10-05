@@ -8,8 +8,9 @@ use serde_derive::Serialize;
 
 use crate::cli::Action;
 use crate::cli::ExitResult;
-use crate::models::schools::School;
-use crate::models::schools::SchoolService;
+use crate::repositories::postgres::schools::PostgresSchoolService;
+use crate::repositories::postgres::schools::School;
+use crate::repositories::school::SchoolService;
 
 // Documentation here : https://www.herault-data.fr/explore/dataset/onisep-etablissements-denseignement-superieur-herault/api/
 
@@ -66,18 +67,24 @@ impl Display for PointGeo {
     }
 }
 
-pub struct SchoolAction {
-    pub school_service: Arc<SchoolService>,
+pub struct SchoolAction<S>
+where
+    S: SchoolService,
+{
+    pub school_service: Arc<S>,
 }
 
-impl SchoolAction {
-    pub fn new(school_service: Arc<SchoolService>) -> Self {
+impl<S> SchoolAction<S>
+where
+    S: SchoolService,
+{
+    pub fn new(school_service: Arc<S>) -> Self {
         Self { school_service }
     }
 }
 
 #[async_trait]
-impl Action for SchoolAction {
+impl Action for SchoolAction<PostgresSchoolService> {
     async fn execute(&self) -> Result<ExitResult, ExitResult> {
         const BASE_URL: &str = "https://www.herault-data.fr/api/explore/v2.1/catalog/datasets/onisep-etablissements-denseignement-superieur-herault/records";
 
@@ -100,7 +107,7 @@ impl Action for SchoolAction {
         // Clear existing schools
         self.school_service.clear().await.map_err(|e| ExitResult {
             exit_code: ExitCode::FAILURE,
-            message: format!("school clear failed: {}", e),
+            message: format!("school clear failed: {:?}", e),
         })?;
 
         // Insert new schools
@@ -111,7 +118,7 @@ impl Action for SchoolAction {
                 .await
                 .map_err(|e| ExitResult {
                     exit_code: ExitCode::FAILURE,
-                    message: format!("school insertion failed: {}", e),
+                    message: format!("school insertion failed: {:?}", e),
                 })?;
         }
 

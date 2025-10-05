@@ -21,11 +21,11 @@ pub struct Cli {
 
 #[derive(Debug, Parser)]
 #[clap(name = "htcrawler", version)]
-pub struct App{
+pub struct App {
     #[clap(subcommand)]
     pub action: Command,
 
-    #[clap(short,long, default_value_t = false)]
+    #[clap(short, long, default_value_t = false)]
     pub ping: bool,
 }
 
@@ -36,7 +36,7 @@ pub enum Command {
     Up,
     Bootstrap,
     Ping,
-    Schools
+    Schools,
 }
 
 impl Command {
@@ -61,16 +61,18 @@ impl Cli {
 
     pub async fn execute(&mut self, app: App) -> Result<ExitResult, ExitResult> {
         match self.actions.get(&app.action) {
-            Some(command) => {
-                command.execute().await
-            },
+            Some(command) => command.execute().await,
             None => Err(ExitResult {
                 exit_code: ExitCode::from(2),
                 message: "command not found".to_string(),
             }),
         }
     }
-    pub fn subscribe_action<T: Action + 'static>(&mut self, caller: Command, action: T) -> &mut Self {
+    pub fn subscribe_action<T: Action + 'static>(
+        &mut self,
+        caller: Command,
+        action: T,
+    ) -> &mut Self {
         self.actions.insert(caller, Box::new(action));
         self
     }

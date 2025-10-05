@@ -2,10 +2,13 @@ use std::sync::Arc;
 
 use sqlx::PgPool;
 
-use crate::cli::actions::meals::Foody;
+use crate::{
+    cli::actions::meals::Foody,
+    repositories::meals::{MealError, MealService},
+};
 
 #[derive(Clone)]
-pub struct MealService {
+pub struct PostgresMealService {
     pub pool: Arc<PgPool>,
 }
 
@@ -17,11 +20,14 @@ pub struct Meal {
     pub idrestaurant: i64,
 }
 
-impl MealService {
+impl PostgresMealService {
     pub fn new(pool: Arc<PgPool>) -> Self {
         Self { pool }
     }
-    pub async fn create(&self, meal: &Meal) -> Result<(), sqlx::Error> {
+}
+
+impl MealService for PostgresMealService {
+    async fn create(&self, meal: &Meal) -> Result<(), MealError> {
         sqlx::query(
             r#"INSERT INTO meal(typemeal, foodies, day, idrestaurant) VALUES ($1, $2, $3, $4)"#,
         )
@@ -30,14 +36,16 @@ impl MealService {
         .bind(meal.day)
         .bind(meal.idrestaurant)
         .execute(self.pool.as_ref())
-        .await?;
+        .await
+        .map_err(|e| MealError::DatabaseError(e))?;
         Ok(())
     }
 
-    pub async fn clean(&self) -> Result<(), sqlx::Error> {
+    async fn clean(&self) -> Result<(), MealError> {
         sqlx::query("DELETE FROM meal")
             .execute(self.pool.as_ref())
-            .await?;
+            .await
+            .map_err(|e| MealError::DatabaseError(e))?;
         Ok(())
     }
 }

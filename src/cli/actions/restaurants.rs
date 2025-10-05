@@ -7,14 +7,20 @@ use tracing::{error, info};
 
 use crate::{
     cli::{Action, ExitResult},
-    models::{
-        keywords::{Category, KeywordService},
-        restaurants::{Restaurant, RestaurantService},
+    repositories::{
+        postgres::{
+            keywords::{Category, KeywordService},
+            restaurants::{PostgresRestaurantService, Restaurant},
+        },
+        restaurants::RestaurantService,
     },
 };
 
-pub struct RestaurantAction {
-    pub restaurant_service: Arc<RestaurantService>,
+pub struct RestaurantAction<R>
+where
+    R: RestaurantService,
+{
+    pub restaurant_service: Arc<R>,
     pub keyword_service: Arc<KeywordService>,
 }
 
@@ -24,11 +30,11 @@ pub struct RestaurantDetails {
     pub hours: String,
 }
 
-impl RestaurantAction {
-    pub fn new(
-        restaurant_service: Arc<RestaurantService>,
-        keyword_service: Arc<KeywordService>,
-    ) -> Self {
+impl<R> RestaurantAction<R>
+where
+    R: RestaurantService,
+{
+    pub fn new(restaurant_service: Arc<R>, keyword_service: Arc<KeywordService>) -> Self {
         Self {
             restaurant_service,
             keyword_service,
@@ -37,15 +43,15 @@ impl RestaurantAction {
 }
 
 #[async_trait]
-impl Action for RestaurantAction {
+impl Action for RestaurantAction<PostgresRestaurantService> {
     async fn execute(&self) -> Result<ExitResult, ExitResult> {
         let mut restaurants = match scrape().await {
             Ok(restaurants) => restaurants,
             Err(err) => {
                 match err {
                     RestaurantError::Reqwest(message) => {
-                        error!("[REQWEST ISSUE] {}",message);
-                    },
+                        error!("[REQWEST ISSUE] {}", message);
+                    }
                     RestaurantError::DomIssue(message) => {
                         error!("[DOM ISSUE] {}", message);
                     }
@@ -115,7 +121,7 @@ impl Action for RestaurantAction {
             Err(err) => {
                 return Err(ExitResult {
                     exit_code: ExitCode::from(2),
-                    message: format!("clear failed: {}", err),
+                    message: format!("clear failed: {:?}", err),
                 });
             }
         }
@@ -132,18 +138,16 @@ impl Action for RestaurantAction {
                                 Category::Restaurant,
                             )
                             .await
-                            .map_err(|err| {
-                                ExitResult {
-                                    exit_code: ExitCode::from(2),
-                                    message: format!("keyword insertion failed: {}", err),
-                                }
+                            .map_err(|err| ExitResult {
+                                exit_code: ExitCode::from(2),
+                                message: format!("keyword insertion failed: {}", err),
                             })?;
                     }
                 }
                 Err(err) => {
                     return Err(ExitResult {
                         exit_code: ExitCode::from(2),
-                        message: format!("restaurant insertion failed: {}", err),
+                        message: format!("restaurant insertion failed: {:?}", err),
                     });
                 }
             }
@@ -161,17 +165,26 @@ impl Action for RestaurantAction {
 }
 
 #[derive(Debug)]
-enum RestaurantError{
+enum RestaurantError {
     Reqwest(String),
-    DomIssue(String)
+    DomIssue(String),
 }
 
 async fn scrape() -> Result<Vec<Restaurant>, RestaurantError> {
     let url = "https://www.crous-montpellier.fr/se-restaurer/ou-manger/";
-    let resp = reqwest::get(url).await.map_err(|_| RestaurantError::Reqwest("Couldn't get restaurants page".to_string()))?;
-    let text_resp = resp.text().await.map_err(|_| RestaurantError::Reqwest("Couldn't convert restaurants page to text".to_string()))?;
+    let resp = reqwest::get(url)
+        .await
+        .map_err(|_| RestaurantError::Reqwest("Couldn't get restaurants page".to_string()))?;
+    let text_resp = resp.text().await.map_err(|_| {
+        RestaurantError::Reqwest("Couldn't convert restaurants page to text".to_string())
+    })?;
     let document = Html::parse_document(&text_resp);
-    let restaurant_selector = Selector::parse(".vc_restaurants ul li a").map_err(|e| RestaurantError::DomIssue(format!("element not found {} error : {}", ".vc_restaurants ul li a", e)))?;
+    let restaurant_selector = Selector::parse(".vc_restaurants ul li a").map_err(|e| {
+        RestaurantError::DomIssue(format!(
+            "element not found {} error : {}",
+            ".vc_restaurants ul li a", e
+        ))
+    })?;
 
     let elements = document.select(&restaurant_selector);
 
@@ -196,7 +209,7 @@ async fn scrape() -> Result<Vec<Restaurant>, RestaurantError> {
         if !city.eq_ignore_ascii_case("Montpellier") && !city.eq_ignore_ascii_case("Sète") {
             continue;
         }
-        
+
         let restaurant_url = restaurant_element.value().attr("href");
 
         if restaurant_url.is_none() {
@@ -272,7 +285,8 @@ async fn scrape_hours(url: &str) -> Result<String, Box<dyn Error>> {
         return Err("no hours found".into());
     }
     let hours = hours.unwrap().text().collect::<Vec<_>>().join(" ");
-    if url == "https://www.crous-montpellier.fr/restaurant/resto-u-triolet/" { //this doesn't scale
+    if url == "https://www.crous-montpellier.fr/restaurant/resto-u-triolet/" {
+        //this doesn't scale
         //very well since it's hardcoded
         return Ok(parse_hours("du lundi au vendredi de 11h30 à 13h30."));
     }
@@ -305,7 +319,6 @@ fn parse_hours(raw_hour: &str) -> String {
         })
         .map(|hour| format!("{}:{}", process_hour(hour[0]), process_hour(hour[1])))
         .collect::<Vec<_>>();
-
 
     hours.join(" - ")
 }

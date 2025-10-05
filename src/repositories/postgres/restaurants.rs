@@ -3,8 +3,10 @@ use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use sqlx::{prelude::FromRow, PgPool};
 
+use crate::repositories::restaurants::{RestaurantError, RestaurantService};
+
 #[derive(Clone)]
-pub struct RestaurantService {
+pub struct PostgresRestaurantService {
     pub pool: Arc<PgPool>,
 }
 
@@ -17,22 +19,24 @@ pub struct Restaurant {
     pub hours: Option<String>,
 }
 
-impl RestaurantService {
+impl PostgresRestaurantService {
     pub fn new(pool: Arc<PgPool>) -> Self {
         Self { pool }
     }
+}
 
-    #[allow(dead_code)]
-    pub async fn find_all(&self) -> Result<Vec<Restaurant>, sqlx::Error> {
+impl RestaurantService for PostgresRestaurantService {
+    async fn find_all(&self) -> Result<Vec<Restaurant>, RestaurantError> {
         let restaurants = sqlx::query_as::<_, Restaurant>(
             r#"SELECT idrestaurant, url, name, gpscoord::text as gpscoord, hours FROM restaurant"#,
         )
         .fetch_all(self.pool.as_ref())
-        .await?;
+        .await
+        .map_err(|e| RestaurantError::DatabaseError(e))?;
         Ok(restaurants)
     }
 
-    pub async fn create(&self, restaurant: Restaurant) -> Result<Restaurant, sqlx::Error> {
+    async fn create(&self, restaurant: Restaurant) -> Result<Restaurant, RestaurantError> {
         if restaurant.gpscoord.is_none() {
             let restaurant_result = sqlx::query_as::<_, Restaurant>(
                 "INSERT INTO restaurant(url, name, hours) VALUES ($1, $2, $3) RETURNING idrestaurant, url, name, gpscoord::text as gpscoord, hours",
@@ -41,7 +45,8 @@ impl RestaurantService {
             .bind(restaurant.name)
             .bind(restaurant.hours)
             .fetch_one(self.pool.as_ref())
-            .await?;
+            .await
+            .map_err(|e| RestaurantError::DatabaseError(e))?;
             return Ok(restaurant_result);
         }
         let restaurant_result = sqlx::query_as::<_, Restaurant>(
@@ -55,14 +60,16 @@ impl RestaurantService {
         .bind(restaurant.name)
         .bind(restaurant.hours)
         .fetch_one(self.pool.as_ref())
-        .await?;
+        .await
+        .map_err(|e| RestaurantError::DatabaseError(e))?;
         Ok(restaurant_result)
     }
 
-    pub async fn clear(&self) -> Result<(), sqlx::Error> {
+    async fn clear(&self) -> Result<(), RestaurantError> {
         sqlx::query("DELETE FROM restaurant")
             .execute(self.pool.as_ref())
-            .await?;
+            .await
+            .map_err(|e| RestaurantError::DatabaseError(e))?;
         Ok(())
     }
 }

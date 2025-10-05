@@ -1,23 +1,31 @@
+mod applications;
 mod cli;
-mod models;
+mod repositories;
 mod telemetry;
 
 use clap::Parser;
-use telemetry::log::init_logger;
 use std::{env, process::ExitCode, sync::Arc};
+use telemetry::log::init_logger;
 
 use cli::{
     actions::{
-        bootstrap::BootstrapAction, meals::MealsAction, ping::PingAction, restaurants::RestaurantAction, schools::SchoolAction, up::UpAction
-    }, Action, App, Cli, Command, ExitResult
+        bootstrap::BootstrapAction, meals::MealsAction, ping::PingAction,
+        restaurants::RestaurantAction, schools::SchoolAction, up::UpAction,
+    },
+    Action, App, Cli, Command, ExitResult,
 };
 use dotenv::dotenv;
 use tracing::{error, info, span, Level};
 
+use crate::repositories::postgres::{
+    keywords::KeywordService, meals::PostgresMealService, restaurants::PostgresRestaurantService,
+    schools::PostgresSchoolService,
+};
+
 #[tokio::main]
 async fn main() -> ExitCode {
     dotenv().ok();
-    
+
     let args = App::parse();
     match get_env_variable("LOKI_ENDPOINT") {
         Ok(endpoint) => init_logger(Some(endpoint), &args.action).await,
@@ -30,7 +38,10 @@ async fn main() -> ExitCode {
     let now = chrono::Utc::now();
 
     if args.ping {
-        match PingAction::new("https://www.crous-montpellier.fr/se-restaurer/ou-manger/").execute().await {
+        match PingAction::new("https://www.crous-montpellier.fr/se-restaurer/ou-manger/")
+            .execute()
+            .await
+        {
             Ok(res) => {
                 info!("{}", res.message);
             }
@@ -54,11 +65,11 @@ async fn main() -> ExitCode {
         }
     };
 
-    let restaurant_service = Arc::new(models::restaurants::RestaurantService::new(pool.clone()));
-    let keyword_service = Arc::new(models::keywords::KeywordService::new(pool.clone()));
-    let meal_service = Arc::new(models::meals::MealService::new(pool.clone()));
+    let restaurant_service = Arc::new(PostgresRestaurantService::new(pool.clone()));
+    let keyword_service = Arc::new(KeywordService::new(pool.clone()));
+    let meal_service = Arc::new(PostgresMealService::new(pool.clone()));
 
-    let school_service = Arc::new(models::schools::SchoolService::new(pool.clone()));
+    let school_service = Arc::new(PostgresSchoolService::new(pool.clone()));
 
     let school_action = SchoolAction::new(school_service.clone());
 
