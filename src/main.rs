@@ -1,11 +1,12 @@
 mod cli;
 mod models;
 mod telemetry;
+mod portforward;
 
 use clap::Parser;
 use telemetry::log::init_logger;
-use std::{env, process::ExitCode, sync::Arc};
 
+use std::{env, process::ExitCode, sync::Arc};
 use cli::{
     actions::{
         bootstrap::BootstrapAction, meals::MealsAction, ping::PingAction, restaurants::RestaurantAction, schools::SchoolAction, up::UpAction
@@ -19,6 +20,12 @@ async fn main() -> ExitCode {
     dotenv().ok();
     
     let args = App::parse();
+
+    if args.kube{
+        // need to initialize port forward
+        portforward::port_forward().await;
+    }
+
     match get_env_variable("LOKI_ENDPOINT") {
         Ok(endpoint) => init_logger(Some(endpoint), &args.action).await,
         Err(_) => init_logger(None, &args.action).await,

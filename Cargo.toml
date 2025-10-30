@@ -26,4 +26,6 @@ opentelemetry_sdk = { version = "0.27.0", default-features = false, features = [
 tracing-opentelemetry = "0.28.0"
 opentelemetry-stdout = "0.27.0"
 serde_derive = "1.0.217"
-
+kube = { version = "2.0.1", features = ["client", "http-proxy", "kube-client", "runtime", "socks5", "ws"] }
+k8s-openapi = { version = "0.26.0", features = ["latest", "schemars"] }
+schemars = { version = "1" }

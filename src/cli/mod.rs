@@ -27,6 +27,9 @@ pub struct App{
 
     #[clap(short,long, default_value_t = false)]
     pub ping: bool,
+
+    #[clap(short, long, default_value_t = false)]
+    pub kube: bool,
 }
 
 #[derive(Debug, Subcommand, PartialEq, Eq, Hash)]
